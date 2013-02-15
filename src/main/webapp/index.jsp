@@ -56,16 +56,20 @@
                         newText = data;
                         $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + (rev - 1), function (data) {
                             baseText = data;
-                            diff(baseText, newText);
+                            $.get('review/diff?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
+                                diff(baseText, newText, data);
+                            })
                         });
                     });
                 }
             }
         }
 
-        function diff(baseText, newText) {
-            $('#left').html(baseText);
-            $('#right').html(newText);
+        function diff(baseText, newText, diff) {
+            $('#left').html('<pre>' + baseText + '</pre>');
+            $('#right').html('<pre>' + newText + '</pre>');
+
+            $('#difff').html('<pre>' + diff + '</pre>');
         }
 
         $(document).keydown(function (event) {
@@ -82,15 +86,25 @@
 </head>
 <body>
 
-<div id="log" style="float: left;"></div>
+<div style="font-size: 9px;">
 
-<div id="revision" style="float: left; border: solid 1px; margin-left: 50px;"></div>
+    <div id="log" style="float: left;"></div>
+
+    <div id="revision" style="float: left; border: solid 1px; margin-left: 50px;"></div>
+
+</div>
 
 <div style="clear: both;"></div>
 
-<textarea id="left" style="width: 600px; height: 600px;"></textarea>
+<div id="diff" style="width: 1204px; height: 600px;">
 
-<textarea id="right" style="width: 600px; height: 600px;"></textarea>
+    <div id="left" style="width: 600px; height: 600px; float: left; border: solid 1px; overflow: auto;"></div>
+
+    <div id="right" style="width: 600px; height: 600px; float: left; border: solid 1px; overflow: auto;"></div>
+
+</div>
+
+<div id="difff"></div>
 
 <input type="button" onclick="loadLog();"/>
 
