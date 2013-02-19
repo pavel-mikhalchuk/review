@@ -3,88 +3,269 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Review</title>
-    <style>
-        .active {
-            background-color: yellow;
-        }
-    </style>
-    <script type="text/javascript" src="js/jquery-1.9.js"></script>
-    <script type="text/javascript">
-        var revMap = new Object();
-        var ctrPressed = false;
+<title>Review</title>
+<style>
+    .active {
+        background-color: yellow;
+    }
+</style>
+<script type="text/javascript" src="js/jquery-1.9.js"></script>
+<script type="text/javascript" src="js/jquery.mousewheel.js"></script>
+<script type="text/javascript">
+var revMap = {};
+var ctrPressed = false;
 
-        function loadLog() {
-            $('#log').html('Loading...');
-            $.get('review/log', function (data) {
-                var table = '<table border="1"><tr><th>Revision</th><th>Author</th><th>Date</th><th>Message</th></tr>';
-                for (var i = 0; i < data.logentry.length; i++) {
-                    var entry = data.logentry[i];
-                    table += '<tr><td>' + entry.revision + '</td><td>' + entry.author + '</td><td>' + entry.date + '</td>' +
-                            '<td>' + entry.msg + '</td><td><input type="button" value="->" onclick="showRevision(' + entry.revision + ');"/></td></tr>';
-                    revMap[entry.revision] = entry;
-                }
-                $('#log').html(table + '</table>');
+function loadLog() {
+    $('#log').html('Loading...');
+    $.get('review/log', function (data) {
+        var table = '<table border="1"><tr><th>Revision</th><th>Author</th><th>Date</th><th>Message</th></tr>';
+        for (var i = 0; i < data.logentry.length; i++) {
+            var entry = data.logentry[i];
+            table += '<tr><td>' + entry.revision + '</td><td>' + entry.author + '</td><td>' + entry.date + '</td>' +
+                    '<td>' + entry.msg + '</td><td><input type="button" value="->" onclick="showRevision(' + entry.revision + ');"/></td></tr>';
+            revMap[entry.revision] = entry;
+        }
+        $('#log').html(table + '</table>');
+    });
+}
+
+function showRevision(revision) {
+    $('#revision').html('<div class="row" action="' + revMap[revision].path[0].action + '" rev="' + revision + '" file="' + revMap[revision].path[0].value + '"  style="padding: 5px 0;">' + revMap[revision].path[0].value + ':' + revMap[revision].path[0].action + '</div>');
+    for (var j = 1; j < revMap[revision].path.length; j++) {
+        var path = revMap[revision].path[j];
+        $('#revision').append('<div class="row" action="' + path.action + '" rev="' + revision + '" file="' + path.value + '" style="padding: 5px 0; border-top: dotted 1px;">' + path.value + ':' + path.action + '</div>');
+    }
+    $('.row').hover(function () {
+        $(this).toggleClass('active');
+    });
+}
+
+function showDiff(action, file, rev) {
+    if ($('.active').length > 0) {
+        if (action == 'A') {
+            $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
+                $('#left').html(data);
             });
-        }
-
-        function showRevision(revision) {
-            $('#revision').html('<div class="row" action="' + revMap[revision].path[0].action + '" rev="' + revision + '" file="' + revMap[revision].path[0].value + '"  style="padding: 5px 0;">' + revMap[revision].path[0].value + ':' + revMap[revision].path[0].action + '</div>');
-            for (var j = 1; j < revMap[revision].path.length; j++) {
-                var path = revMap[revision].path[j];
-                $('#revision').append('<div class="row" action="' + path.action + '" rev="' + revision + '" file="' + path.value + '" style="padding: 5px 0; border-top: dotted 1px;">' + path.value + ':' + path.action + '</div>');
-            }
-            $('.row').hover(function () {
-                $(this).toggleClass('active');
+        } else if (action == 'D') {
+            $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
+                $('#right').html(data);
             });
+        } else {
+            $.get('review/diff?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
+                diff(data);
+            })
         }
+    }
+}
 
-        function showDiff(action, file, rev) {
-            if ($('.active').length > 0) {
-                if (action == 'A') {
-                    $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
-                        $('#left').html(data);
-                    });
-                } else if (action == 'D') {
-                    $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
-                        $('#right').html(data);
-                    });
-                } else {
-                    var baseText;
-                    var newText;
-                    $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
-                        newText = data;
-                        $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + (rev - 1), function (data) {
-                            baseText = data;
-                            $.get('review/diff?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
-                                diff(baseText, newText, data);
-                            })
-                        });
-                    });
+var _diff;
+
+var leftByLine = {}; //
+var leftByRealLine = {}; //
+var leftLineCount;
+var leftFirst = 1;
+var leftLast = 40;
+var leftLineByRealLine = {};
+var leftRealLineByLine = {};
+var leftOver = 0;
+
+var rightByLine = {}; //
+var rightByRealLine = {}; //
+var rightLineCount;
+var rightFirst = 1;
+var rightLast = 40;
+var rightLineByRealLine = {};
+var rightRealLineByLine = {};
+var rightOver = 0;
+
+function diff(diff) {
+    _diff = diff;
+
+    var left = writeSide(diff.left);
+    $('#left-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + left.lines + '</pre>');
+    $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
+    leftLineCount = left.lineCount;
+    leftLineByRealLine = left.lineByRealLine;
+    leftRealLineByLine = left.realLineByLine;
+    $('#left').mousewheel(scrollLeft);
+
+    var right = writeSide(diff.right);
+    $('#right-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + right.lines + '</pre>');
+    $('#right-line').html('<pre style="margin: 0; color: #a52a2a;">' + right.numbers + '</pre>');
+    rightLineCount = right.lineCount;
+    rightLineByRealLine = right.lineByRealLine;
+    rightRealLineByLine = right.realLineByLine;
+
+    $('#right').mousewheel(scrollRight);
+}
+
+function writeSide(lines) {
+    var border = false;
+
+    var lineByRealLine = {};
+    var realLineByLine = {};
+    var lineCount = 1;
+
+    var line = lines[0];
+    lineByRealLine['1'] = 1;
+    realLineByLine['1'] = 1;
+
+    var wl = writeLine(line, lineCount, false);
+    var linesHtml = wl.html;
+    var numbersHtml = wl.number;
+    lineCount++;
+
+    for (var i = 1; i < lines.length; i++) {
+        line = lines[i];
+        lineByRealLine[lineCount] = i + 1;
+        realLineByLine[i + 1] = lineCount;
+
+        if ((line.action == '+' && line.line == '') || (line.action == '-' && line.line == '')) border = true;
+        else {
+            wl = writeLine(line, lineCount, border);
+            linesHtml += wl.html;
+            numbersHtml += wl.number;
+            lineCount++;
+            border = false;
+        }
+    }
+    return { lines: linesHtml, numbers: numbersHtml, lineCount: lineCount - 1, lineByRealLine: lineByRealLine, realLineByLine: realLineByLine };
+}
+
+function writeLine(line, number, border) {
+    if (line.action == '+') {
+        return { html: '<div style="height: 15px; background-color: #7cfc00; border-top: solid 1px ' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+    } else if (line.action == '-') {
+        return { html: '<div style="height: 15px; background-color: #a9a9a9; border-top: solid 1px ' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+    } else if (line.action == '!') {
+        return { html: '<div style="height: 15px; background-color: aqua; border-top: solid 1px' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+    }
+    return { html: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+}
+
+function safeTags(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function scrollLeft(event, delta, deltaX, deltaY) {
+    var rowsDelta = 0;
+
+    if (deltaY < 0) {
+        rowsDelta += 1;
+    } else if (deltaY > 0) {
+        rowsDelta += -1;
+    }
+
+    if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + 6) rowsDelta = 0;
+
+    if (rowsDelta != 0) {
+        setLeftRow(rowsDelta);
+        if (leftOver > 0) {
+            leftOver += rowsDelta;
+        } else {
+            if (rightLast + rowsDelta <= rightLineCount + 6 && rightFirst + rowsDelta > 0) {
+                var row;
+
+                for (row = rightFirst; row < 20; row++) {
+                    if (rightRealLineByLine[leftLineByRealLine[row]] == rightRealLineByLine[leftLineByRealLine[row + 1]]) {
+                        if (rightRealLineByLine[leftLineByRealLine[row]] - rightFirst >= row - leftFirst + 1) break;
+                    }
                 }
+
+                setRightRow(rightRealLineByLine[leftLineByRealLine[leftFirst + row]] - (rightFirst + row));
+            } else {
+                if (rowsDelta > 0) leftOver += rowsDelta;
             }
         }
+    }
 
-        function diff(baseText, newText, diff) {
-            $('#left').html('<pre>' + baseText + '</pre>');
-            $('#right').html('<pre>' + newText + '</pre>');
+    $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount + ";  " + leftOver);
 
-            $('#difff').html('<pre>' + diff + '</pre>');
-        }
+    event.preventDefault();
+}
 
-        $(document).keydown(function (event) {
-            if (event.keyCode == 17) ctrPressed = true;
-            if (event.keyCode == 68 && ctrPressed) {
-                showDiff($('.active').attr('action'), $('.active').attr('file'), $('.active').attr('rev'));
+function setLeftRow(rowsDelta) {
+    if (rowsDelta == 0) return;
+
+    var c = $('#left-content').offset();
+    var l = $('#left-line').offset();
+
+    $('#left-content').offset({top: c.top - 16 * rowsDelta, left: c.left});
+    $('#left-line').offset({top: l.top - 16 * rowsDelta, left: l.left});
+
+    leftFirst += rowsDelta;
+    leftLast += rowsDelta;
+}
+
+function scrollRight(event, delta, deltaX, deltaY) {
+    var rowsDelta = 0;
+
+    if (deltaY < 0) {
+        rowsDelta += 1;
+    } else if (deltaY > 0) {
+        rowsDelta += -1;
+    }
+
+    if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + 6) rowsDelta = 0;
+
+    if (rowsDelta != 0) {
+        setRightRow(rowsDelta);
+        if (rightOver > 0) {
+            rightOver += rowsDelta;
+        } else {
+            if (leftLast + rowsDelta <= leftLineCount + 6 && leftFirst + rowsDelta > 0) {
+                var row;
+
+                for (row = rightFirst; row < 20; row++) {
+                    if (leftRealLineByLine[rightLineByRealLine[row]] == leftRealLineByLine[rightLineByRealLine[row + 1]]) {
+                        if (leftRealLineByLine[rightLineByRealLine[row]] - leftFirst >= row - rightFirst + 1) break;
+                    }
+                }
+
+                setLeftRow(leftRealLineByLine[rightLineByRealLine[rightFirst + row]] - (leftFirst + row));
+            } else {
+                if (rowsDelta > 0) rightOver += rowsDelta;
             }
-        });
+        }
+    }
 
-        $(document).keyup(function (event) {
-            if (event.keyCode == 17) ctrPressed = false;
-        });
-    </script>
+    $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount + ';   ' + rightOver);
+
+    event.preventDefault();
+}
+
+function setRightRow(rowsDelta) {
+    if (rowsDelta == 0) return;
+
+    var c = $('#right-content').offset();
+    var r = $('#right-line').offset();
+
+    $('#right-content').offset({top: c.top - 16 * rowsDelta, left: c.left});
+    $('#right-line').offset({top: r.top - 16 * rowsDelta, left: r.left});
+
+    rightFirst += rowsDelta;
+    rightLast += rowsDelta;
+}
+
+$(document).keydown(function (event) {
+    if (event.keyCode == 17) ctrPressed = true;
+    if (event.keyCode == 68 && ctrPressed) {
+        showDiff($('.active').attr('action'), $('.active').attr('file'), $('.active').attr('rev'));
+    }
+});
+
+$(document).keyup(function (event) {
+    if (event.keyCode == 17) ctrPressed = false;
+});
+
+function loadTestDiff() {
+    $.get('review/diff?file=' + encodeURIComponent('/app-framework/trunk/jdbc/src/main/java/com/shc/obu/app/framework/jdbc/shard/search/SearchShardLocator.java') + '&rev=' + '124714', function (data) {
+        diff(data);
+    })
+}
+</script>
 </head>
-<body>
+<body style="margin: 4px;">
 
 <div style="font-size: 9px;">
 
@@ -94,19 +275,38 @@
 
 </div>
 
-<div style="clear: both;"></div>
+<div style="clear: both; margin-bottom: 4px;"></div>
 
-<div id="diff" style="width: 1204px; height: 600px;">
+<div id="diff" style="width: 1342px; height: 600px;">
 
-    <div id="left" style="width: 600px; height: 600px; float: left; border: solid 1px; overflow: auto;"></div>
+    <div id="left" style="width: 654px; height: 640px; float: left; border: solid 1px #acacac; overflow: hidden;">
+        <div id="left-scroll"
+             style="width: 20px; height: 640px; background-color: #f3f3f3; float: left; border-right: solid 1px #acacac;"></div>
+        <div id="left-line"
+             style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
+        <div style="width: 30px; height: 640px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
+        <div id="left-content" style="overflow: hidden;"></div>
+    </div>
 
-    <div id="right" style="width: 600px; height: 600px; float: left; border: solid 1px; overflow: auto;"></div>
+    <div id="right"
+         style="width: 654px; height: 640px; float: left; border: solid 1px #acacac; overflow: hidden; margin-left: 30px;">
+        <div id="right-line"
+             style="background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac; direction: rtl;"></div>
+        <div style="width: 30px; height: 640px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
+        <div id="right-scroll"
+             style="width: 20px; height: 640px; background-color: #f3f3f3; float: right; border-left: solid 1px #acacac;"></div>
+        <div id="right-content" style="overflow: hidden;"></div>
+    </div>
 
 </div>
 
-<div id="difff"></div>
+<div>
+    <div id="left-out" style="width: 656px; float: left;">left-out</div>
+    <div id="right-out" style="width: 656px; float: left; margin-left: 30px;">right-out</div>
+</div>
 
 <input type="button" onclick="loadLog();"/>
+<input type="button" onclick="loadTestDiff();"/>
 
 </body>
 </html>

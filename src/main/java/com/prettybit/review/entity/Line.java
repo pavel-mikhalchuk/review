@@ -2,6 +2,7 @@ package com.prettybit.review.entity;
 
 import org.apache.commons.lang.ObjectUtils;
 
+import javax.xml.bind.annotation.XmlElement;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,8 +20,13 @@ public class Line {
         actions.put("-", "-");
     }
 
+    @XmlElement
     private Integer number;
+
+    @XmlElement
     private String action;
+
+    @XmlElement
     private String line;
 
     public Line(String line) {
@@ -51,8 +57,20 @@ public class Line {
         return action;
     }
 
+    public void setAction(String action) {
+        this.action = action;
+    }
+
+    public boolean withAction(String a) {
+        return action != null && action.equals(a);
+    }
+
     public String line() {
         return line;
+    }
+
+    public void setLine(String line) {
+        this.line = line;
     }
 
     @Override
@@ -74,10 +92,6 @@ public class Line {
 
     public static String actionFromLine(String line) {
         return isNotBlank(line) ? actions.get(line.substring(0, 1)) : null;
-    }
-
-    public static String cutAction(String line) {
-        return actionFromLine(line) != null ? line.substring(1) : line;
     }
 
 }

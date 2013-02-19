@@ -19,14 +19,4 @@ public class LineTest {
         assertEquals(null, Line.actionFromLine(null));
     }
 
-    @Test
-    public void testCutActionFromLine() {
-        assertEquals("asd", Line.cutAction("-asd"));
-        assertEquals("asd", Line.cutAction("+asd"));
-        assertEquals("asd", Line.cutAction("asd"));
-        assertEquals("  ", Line.cutAction("  "));
-        assertEquals("", Line.cutAction(""));
-        assertEquals(null, Line.cutAction(null));
-    }
-
 }

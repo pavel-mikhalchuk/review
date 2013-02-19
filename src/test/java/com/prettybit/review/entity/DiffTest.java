@@ -16,24 +16,63 @@ import static org.junit.Assert.assertTrue;
 public class DiffTest {
 
     @Test
-    public void testParseDiff() throws IOException {
-        List<Diff.Entry> diffs = Diff.doParse("pre\n@@ -666,s +l,s @@\ncontent\ncontent\n");
+    public void testParseReadDiff() throws IOException {
+        List<Diff.Entry> diff = Diff.doParse("Index: app-core/src/main/java/com/shc/obu/app/framework/processor/IncrementalIndexProcessor.java\n" +
+                "===================================================================\n" +
+                "--- app-core/src/main/java/com/shc/obu/app/framework/processor/IncrementalIndexProcessor.java\t(revision 124723)\n" +
+                "+++ app-core/src/main/java/com/shc/obu/app/framework/processor/IncrementalIndexProcessor.java\t(revision 124724)\n" +
+                "@@ -3,6 +3,7 @@\n" +
+                " import com.shc.obu.app.framework.fetchers.FetchParamsKeys;\n" +
+                " import com.shc.obu.app.framework.flow.Flow;\n" +
+                " import com.shc.obu.app.framework.msg.DateRangeMessage;\n" +
+                "+import com.shc.obu.app.framework.msg.IncrementalIndexMessage;\n" +
+                " import com.shc.obu.app.framework.parameters.Parameters;\n" +
+                " import com.shc.obu.app.framework.registry.ComponentLookupService;\n" +
+                " import com.shc.obu.ca.common.fsqueue.AsyncMessageProcessor;\n" +
+                "@@ -29,13 +30,14 @@\n" +
+                " \n" +
+                "     @Override\n" +
+                "     public void onMessage(ByteBuffer byteBuffer, int i, Logger logger) {\n" +
+                "-        DateRangeMessage message = DateRangeMessage.byteBufferToMessage(byteBuffer, DateRangeMessage.class);\n" +
+                "+        IncrementalIndexMessage message = IncrementalIndexMessage.byteBufferToMessage(byteBuffer, IncrementalIndexMessage.class);\n" +
+                "         try {\n" +
+                "             Flow<Parameters> flow = ComponentLookupService.getFlow(flowName, flowVersion);\n" +
+                " \n" +
+                "             Parameters params = new Parameters();\n" +
+                "             params.put(FetchParamsKeys.startDate, message.getStartDateTime());\n" +
+                "             params.put(FetchParamsKeys.endDate, message.getEndDateTime());\n" +
+                "+            params.put(FetchParamsKeys.dbShardIndex, message.getDbShardIndex());\n" +
+                "             flow.preProcess(params);\n" +
+                " \n" +
+                "             flow.process();\n");
 
-        assertEquals(1, diffs.size());
-        assertEquals(asList(new Line("content"), new Line("content")), diffs.get(0).lines());
-
-        diffs = Diff.doParse("pre\n@@ -3,s +l,s @@\ncontent\n@@ -6,s +l,s @@\n+post\n-post\n");
-
-        assertEquals(2, diffs.size());
-        assertEquals(asList(new Line("content")), diffs.get(0).lines());
-        assertEquals(asList(new Line("post", "+"), new Line("post", "-")), diffs.get(1).lines());
-
-        diffs = Diff.doParse("pre\n\n\n\n@@ -33,s +l,s @@\n\n\ncontent\n\n@@ -100,s +l,s @@\npost\n@@ -666,s +l,s @@\n\npost-post\n");
-
-        assertEquals(3, diffs.size());
-        assertEquals(asList(new Line(""), new Line(""), new Line("content"), new Line("")), diffs.get(0).lines());
-        assertEquals(asList(new Line("post")), diffs.get(1).lines());
-        assertEquals(asList(new Line(""), new Line("post-post")), diffs.get(2).lines());
+        assertEquals(2, diff.size());
+        assertEquals(asList(
+                new Line("import com.shc.obu.app.framework.fetchers.FetchParamsKeys;"),
+                new Line("import com.shc.obu.app.framework.flow.Flow;"),
+                new Line("import com.shc.obu.app.framework.msg.DateRangeMessage;"),
+                new Line("import com.shc.obu.app.framework.msg.IncrementalIndexMessage;", "+"),
+                new Line("import com.shc.obu.app.framework.parameters.Parameters;"),
+                new Line("import com.shc.obu.app.framework.registry.ComponentLookupService;"),
+                new Line("import com.shc.obu.ca.common.fsqueue.AsyncMessageProcessor;")
+        ), diff.get(0).lines());
+        assertEquals(asList(
+                new Line(""),
+                new Line("    @Override"),
+                new Line("    public void onMessage(ByteBuffer byteBuffer, int i, Logger logger) {"),
+                new Line("        DateRangeMessage message = DateRangeMessage.byteBufferToMessage(byteBuffer, DateRangeMessage.class);", "-"),
+                new Line("        IncrementalIndexMessage message = IncrementalIndexMessage.byteBufferToMessage(byteBuffer, IncrementalIndexMessage.class);", "+"),
+                new Line("        try {"),
+                new Line("            Flow<Parameters> flow = ComponentLookupService.getFlow(flowName, flowVersion);"),
+                new Line(""),
+                new Line("            Parameters params = new Parameters();"),
+                new Line("            params.put(FetchParamsKeys.startDate, message.getStartDateTime());"),
+                new Line("            params.put(FetchParamsKeys.endDate, message.getEndDateTime());"),
+                new Line("            params.put(FetchParamsKeys.dbShardIndex, message.getDbShardIndex());", "+"),
+                new Line("            flow.preProcess(params);"),
+                new Line(""),
+                new Line("            flow.process();")
+        ), diff.get(1).lines());
     }
 
     @Test

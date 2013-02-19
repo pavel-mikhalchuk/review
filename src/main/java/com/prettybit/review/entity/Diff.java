@@ -21,8 +21,12 @@ public class Diff {
         }
     }
 
-    public Entry startingAt(Integer line) {
-        return map.get(line);
+    public Entry startingAt(Line line) {
+        return map.get(line.number());
+    }
+
+    public boolean existFor(Line line) {
+        return map.containsKey(line.number());
     }
 
     public static Diff parse(String diff) throws IOException {
@@ -68,7 +72,7 @@ public class Diff {
                         lines = null;
                         return entry;
                     }
-                } else if (lines != null) lines.add(new Line(Line.cutAction(line), Line.actionFromLine(line)));
+                } else if (lines != null) lines.add(new Line(line.substring(1), Line.actionFromLine(line)));
             }
         }
 
@@ -88,12 +92,9 @@ public class Diff {
 
         private List<Line> lines;
 
-        private Line lastLine;
-
         public Entry(Integer start, List<Line> lines) {
             this.start = start;
             this.lines = lines;
-            lastLine = lines.get(lines().size() - 1);
         }
 
         public Integer start() {
@@ -102,10 +103,6 @@ public class Diff {
 
         public List<Line> lines() {
             return lines;
-        }
-
-        public boolean lastLine(Line line) {
-            return lastLine.line().equals(line.line());
         }
 
     }
