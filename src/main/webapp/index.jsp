@@ -90,6 +90,7 @@ function diff(diff) {
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
+    $('#left').unmousewheel(scrollLeft);
     $('#left').mousewheel(scrollLeft);
 
     var right = writeSide(diff.right);
@@ -99,6 +100,7 @@ function diff(diff) {
     rightLineByRealLine = right.lineByRealLine;
     rightRealLineByLine = right.realLineByLine;
 
+    $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
 }
 
