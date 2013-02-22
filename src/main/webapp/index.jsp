@@ -78,6 +78,9 @@ var rightLineByRealLine = {};
 var rightRealLineByLine = {};
 var rightOver = 0;
 
+var maxRow = 20;
+var downOver = 6;
+
 function diff(diff) {
     _diff = diff;
 
@@ -107,8 +110,8 @@ function writeSide(lines) {
     var lineCount = 1;
 
     var line = lines[0];
-    lineByRealLine['1'] = 1;
-    realLineByLine['1'] = 1;
+    lineByRealLine['1'] = {'number': 1, 'scrolled': false};
+    realLineByLine['1'] = {'number': 1, 'scrolled': false};
 
     var wl = writeLine(line, lineCount, false);
     var linesHtml = wl.html;
@@ -117,8 +120,8 @@ function writeSide(lines) {
 
     for (var i = 1; i < lines.length; i++) {
         line = lines[i];
-        lineByRealLine[lineCount] = i + 1;
-        realLineByLine[i + 1] = lineCount;
+        lineByRealLine[lineCount] = {'number': i + 1, 'scrolled': false};
+        realLineByLine[i + 1] = {'number': lineCount, 'scrolled': false};
 
         if ((line.action == '+' && line.line == '') || (line.action == '-' && line.line == '')) border = true;
         else {
@@ -159,7 +162,6 @@ function scrollLeft(event, delta, deltaX, deltaY) {
     if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + 6) rowsDelta = 0;
 
     if (rowsDelta != 0) {
-        setLeftRow(rowsDelta);
         if (leftOver > 0) {
             leftOver += rowsDelta;
         } else {
@@ -167,16 +169,17 @@ function scrollLeft(event, delta, deltaX, deltaY) {
                 var row;
 
                 for (row = rightFirst; row < 20; row++) {
-                    if (rightRealLineByLine[leftLineByRealLine[row]] == rightRealLineByLine[leftLineByRealLine[row + 1]]) {
-                        if (rightRealLineByLine[leftLineByRealLine[row]] - rightFirst >= row - leftFirst + 1) break;
+                    if (rightRealLineByLine[leftLineByRealLine[row]] == rightRealLineByLine[leftLineByRealLine[row] + 1]) {
+                        if (rightRealLineByLine[leftLineByRealLine[row]] - rightFirst == row - leftFirst) break;
                     }
                 }
 
-                setRightRow(rightRealLineByLine[leftLineByRealLine[leftFirst + row]] - (rightFirst + row));
+                setRightRow(rightRealLineByLine[leftLineByRealLine[leftFirst] + 1] - rightRealLineByLine[leftLineByRealLine[row]]);
             } else {
                 if (rowsDelta > 0) leftOver += rowsDelta;
             }
         }
+        setLeftRow(rowsDelta);
     }
 
     $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount + ";  " + leftOver);
@@ -206,27 +209,43 @@ function scrollRight(event, delta, deltaX, deltaY) {
         rowsDelta += -1;
     }
 
-    if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + 6) rowsDelta = 0;
+    if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + downOver) rowsDelta = 0;
 
     if (rowsDelta != 0) {
-        setRightRow(rowsDelta);
-        if (rightOver > 0) {
+        if (rightOver != 0) {
             rightOver += rowsDelta;
         } else {
-            if (leftLast + rowsDelta <= leftLineCount + 6 && leftFirst + rowsDelta > 0) {
-                var row;
-
-                for (row = rightFirst; row < 20; row++) {
-                    if (leftRealLineByLine[rightLineByRealLine[row]] == leftRealLineByLine[rightLineByRealLine[row + 1]]) {
-                        if (leftRealLineByLine[rightLineByRealLine[row]] - leftFirst >= row - rightFirst + 1) break;
+            if (leftLast + rowsDelta <= leftLineCount + downOver && leftFirst + rowsDelta > 0) {
+                if (rowsDelta > 0) {
+                    for (var row = rightFirst; row <= rightFirst + maxRow; row++) {
+                        if (leftRealLineByLine[rightLineByRealLine[row].number].number == leftRealLineByLine[rightLineByRealLine[row].number + 1].number) {
+                            if (rightLineByRealLine[row].scrolled == false) {
+                                rightLineByRealLine[row].scrolled = true;
+                                row = -1;
+                                break;
+                            }
+                        }
                     }
+                    if (row != -1) setLeftRow(rowsDelta);
+                } else {
+                    for (var row = rightLast; row >= rightFirst + maxRow - 1; row--) {
+                        if (row <= rightLineCount - downOver) {
+                            if (leftRealLineByLine[rightLineByRealLine[row]] == leftRealLineByLine[rightLineByRealLine[row] - 1]) {
+                                if (rightLineByRealLine[row].scrolled == true) {
+                                    rightLineByRealLine[row].scrolled = false;
+                                    row = -1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (row != -1) setLeftRow(rowsDelta);
                 }
-
-                setLeftRow(leftRealLineByLine[rightLineByRealLine[rightFirst + row]] - (leftFirst + row));
             } else {
-                if (rowsDelta > 0) rightOver += rowsDelta;
+                rightOver += rowsDelta;
             }
         }
+        setRightRow(rowsDelta);
     }
 
     $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount + ';   ' + rightOver);
@@ -259,7 +278,7 @@ $(document).keyup(function (event) {
 });
 
 function loadTestDiff() {
-    $.get('review/diff?file=' + encodeURIComponent('/app-framework/trunk/jdbc/src/main/java/com/shc/obu/app/framework/jdbc/shard/search/SearchShardLocator.java') + '&rev=' + '124714', function (data) {
+    $.get('review/diff?file=' + encodeURIComponent('/app-framework/trunk/app-core/src/main/java/com/shc/obu/app/framework/flow/ItemSearchIncrementalIndexFlow.java') + '&rev=' + '124714', function (data) {
         diff(data);
     })
 }
