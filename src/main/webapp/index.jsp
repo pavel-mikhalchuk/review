@@ -90,6 +90,8 @@ function diff(diff) {
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
+    setLeftRow(-1 * leftFirst);
+    leftOver = 0;
     $('#left').unmousewheel(scrollLeft);
     $('#left').mousewheel(scrollLeft);
 
@@ -99,7 +101,8 @@ function diff(diff) {
     rightLineCount = right.lineCount;
     rightLineByRealLine = right.lineByRealLine;
     rightRealLineByLine = right.realLineByLine;
-
+    setRightRow(-1 * rightFirst);
+    rightOver = 0;
     $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
 }
@@ -161,24 +164,40 @@ function scrollLeft(event, delta, deltaX, deltaY) {
         rowsDelta += -1;
     }
 
-    if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + 6) rowsDelta = 0;
+    if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + downOver) rowsDelta = 0;
 
     if (rowsDelta != 0) {
-        if (leftOver > 0) {
+        if (leftOver != 0) {
             leftOver += rowsDelta;
         } else {
-            if (rightLast + rowsDelta <= rightLineCount + 6 && rightFirst + rowsDelta > 0) {
-                var row;
-
-                for (row = rightFirst; row < 20; row++) {
-                    if (rightRealLineByLine[leftLineByRealLine[row]] == rightRealLineByLine[leftLineByRealLine[row] + 1]) {
-                        if (rightRealLineByLine[leftLineByRealLine[row]] - rightFirst == row - leftFirst) break;
+            if (rightLast + rowsDelta <= rightLineCount + downOver && rightFirst + rowsDelta > 0) {
+                if (rowsDelta > 0) {
+                    for (var row = leftFirst; row <= leftFirst + maxRow; row++) {
+                        if (rightRealLineByLine[leftLineByRealLine[row].number].number == rightRealLineByLine[leftLineByRealLine[row].number + 1].number) {
+                            if (leftLineByRealLine[row].scrolled == false) {
+                                leftLineByRealLine[row].scrolled = true;
+                                row = -1;
+                                break;
+                            }
+                        }
                     }
+                    if (row != -1) setRightRow(rowsDelta);
+                } else {
+                    for (var row = leftLast; row >= leftFirst + maxRow - 1; row--) {
+                        if (row <= leftLineCount - downOver) {
+                            if (rightRealLineByLine[leftLineByRealLine[row]] == rightRealLineByLine[leftLineByRealLine[row] - 1]) {
+                                if (leftLineByRealLine[row].scrolled == true) {
+                                    leftLineByRealLine[row].scrolled = false;
+                                    row = -1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (row != -1) setRightRow(rowsDelta);
                 }
-
-                setRightRow(rightRealLineByLine[leftLineByRealLine[leftFirst] + 1] - rightRealLineByLine[leftLineByRealLine[row]]);
             } else {
-                if (rowsDelta > 0) leftOver += rowsDelta;
+                leftOver += rowsDelta;
             }
         }
         setLeftRow(rowsDelta);
