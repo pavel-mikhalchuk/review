@@ -8,6 +8,36 @@
     .active {
         background-color: yellow;
     }
+
+    .row {
+        height: 14px;
+        border-top: solid 1px white;
+        border-bottom: solid 1px white;
+    }
+
+    .number {
+        background-color: #f3f3f3;
+    }
+
+    .modified {
+        background-color: aqua;
+    }
+
+    .added {
+        background-color: #7cfc00;
+    }
+
+    .deleted {
+        background-color: #a9a9a9;
+    }
+
+    .first {
+        border-top: solid 1px brown;
+    }
+
+    .last {
+        border-bottom: solid 1px brown;
+    }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
@@ -90,7 +120,7 @@ function diff(diff) {
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
-    setLeftRow(-1 * leftFirst);
+    setLeftRow(1 - leftFirst);
     leftOver = 0;
     $('#left').unmousewheel(scrollLeft);
     $('#left').mousewheel(scrollLeft);
@@ -101,7 +131,7 @@ function diff(diff) {
     rightLineCount = right.lineCount;
     rightLineByRealLine = right.lineByRealLine;
     rightRealLineByLine = right.realLineByLine;
-    setRightRow(-1 * rightFirst);
+    setRightRow(1 - rightFirst);
     rightOver = 0;
     $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
@@ -118,7 +148,7 @@ function writeSide(lines) {
     lineByRealLine['1'] = {'number': 1, 'scrolled': false};
     realLineByLine['1'] = {'number': 1, 'scrolled': false};
 
-    var wl = writeLine(line, lineCount, false);
+    var wl = writeLine(line, lineCount, false, !emptyLine(line) && (line.action == '+' || line.action == '-') ? 'first' : '');
     var linesHtml = wl.html;
     var numbersHtml = wl.number;
     lineCount++;
@@ -128,9 +158,15 @@ function writeSide(lines) {
         lineByRealLine[lineCount] = {'number': i + 1, 'scrolled': false};
         realLineByLine[i + 1] = {'number': lineCount, 'scrolled': false};
 
-        if ((line.action == '+' && line.line == '') || (line.action == '-' && line.line == '')) border = true;
+        if (emptyLine(line)) border = true;
         else {
-            wl = writeLine(line, lineCount, border);
+            var side = '';
+            if (!emptyLine(line) && (line.action == '+' || line.action == '-')) {
+                if (lines[i - 1].action != line.action) side = 'first';
+                if (i == lines.length - 1 || lines[i + 1].action != line.action) side += ' last';
+            }
+
+            wl = writeLine(line, lineCount, border, side);
             linesHtml += wl.html;
             numbersHtml += wl.number;
             lineCount++;
@@ -140,15 +176,19 @@ function writeSide(lines) {
     return { lines: linesHtml, numbers: numbersHtml, lineCount: lineCount - 1, lineByRealLine: lineByRealLine, realLineByLine: realLineByLine };
 }
 
-function writeLine(line, number, border) {
+function emptyLine(line) {
+    return (line.action == '+' && line.line == '') || (line.action == '-' && line.line == '');
+}
+
+function writeLine(line, number, border, firstOrLast) {
     if (line.action == '+') {
-        return { html: '<div style="height: 15px; background-color: #7cfc00; border-top: solid 1px ' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+        return { html: '<div class="row added ' + firstOrLast + '">' + safeTags(line.line) + '</div>', number: '<div class="row number ' + firstOrLast + '">' + number + '</div>' };
     } else if (line.action == '-') {
-        return { html: '<div style="height: 15px; background-color: #a9a9a9; border-top: solid 1px ' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+        return { html: '<div class="row deleted ' + firstOrLast + '">' + safeTags(line.line) + '</div>', number: '<div class="row number ' + firstOrLast + '">' + number + '</div>' };
     } else if (line.action == '!') {
-        return { html: '<div style="height: 15px; background-color: aqua; border-top: solid 1px' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+        return { html: '<div class="row modified first-last">' + safeTags(line.line) + '</div>', number: '<div class="row number first-last">' + number + '</div>' };
     }
-    return { html: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' white;">') + safeTags(line.line) + '</div>', number: '<div style="height: 15px; border-top: solid 1px' + (border == true ? ' brown;">' : ' #f3f3f3;">') + number + '</div>' };
+    return { html: '<div class="row ' + (border == true ? ' first">' : ';">') + safeTags(line.line) + '</div>', number: '<div class="row number ' + (border == true ? ' first;">' : ' ;">') + number + '</div>' };
 }
 
 function safeTags(str) {
