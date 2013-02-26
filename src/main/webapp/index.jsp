@@ -10,25 +10,29 @@
     }
 
     .row {
-        height: 14px;
-        border-top: solid 1px white;
+        height: 15px;
+        /*border-top: solid 1px white;*/
         border-bottom: solid 1px white;
     }
 
     .number {
         background-color: #f3f3f3;
+        border-bottom: solid 1px #f3f3f3;
     }
 
     .modified {
-        background-color: aqua;
+        background-color: #bfd5ff;
+        border-bottom: solid 1px #bfd5ff;
     }
 
     .added {
-        background-color: #7cfc00;
+        background-color: #98fcb7;
+        border-bottom: solid 1px #98fcb7;
     }
 
     .deleted {
         background-color: #a9a9a9;
+        border-bottom: solid 1px #a9a9a9;
     }
 
     .first {
@@ -36,7 +40,7 @@
     }
 
     .last {
-        border-bottom: solid 1px brown;
+        border-bottom: solid 1px #acacac;
     }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
@@ -116,6 +120,7 @@ function diff(diff) {
 
     var left = writeSide(diff.left);
     $('#left-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + left.lines + '</pre>');
+    $('#left-middle').html('<pre style="margin: 0; color: #a52a2a;">' + left.middle + '</pre>');
     $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
@@ -127,6 +132,7 @@ function diff(diff) {
 
     var right = writeSide(diff.right);
     $('#right-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + right.lines + '</pre>');
+    $('#right-middle').html('<pre style="margin: 0; color: #a52a2a;">' + right.middle + '</pre>');
     $('#right-line').html('<pre style="margin: 0; color: #a52a2a;">' + right.numbers + '</pre>');
     rightLineCount = right.lineCount;
     rightLineByRealLine = right.lineByRealLine;
@@ -135,6 +141,8 @@ function diff(diff) {
     rightOver = 0;
     $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
+
+    writeConnections();
 }
 
 function writeSide(lines) {
@@ -148,47 +156,58 @@ function writeSide(lines) {
     lineByRealLine['1'] = {'number': 1, 'scrolled': false};
     realLineByLine['1'] = {'number': 1, 'scrolled': false};
 
-    var wl = writeLine(line, lineCount, false, !emptyLine(line) && (line.action == '+' || line.action == '-') ? 'first' : '');
+    var wl = writeLine(line, lineCount, (lines[1].action == '+' || lines[1].action == '-' || lines[1].action == '!'));
     var linesHtml = wl.html;
+    var middleHtml = wl.middle;
     var numbersHtml = wl.number;
     lineCount++;
 
-    for (var i = 1; i < lines.length; i++) {
+    for (var i = 1; i < lines.length - 1; i++) {
         line = lines[i];
         lineByRealLine[lineCount] = {'number': i + 1, 'scrolled': false};
         realLineByLine[i + 1] = {'number': lineCount, 'scrolled': false};
 
-        if (emptyLine(line)) border = true;
-        else {
-            var side = '';
-            if (!emptyLine(line) && (line.action == '+' || line.action == '-')) {
-                if (lines[i - 1].action != line.action) side = 'first';
-                if (i == lines.length - 1 || lines[i + 1].action != line.action) side += ' last';
+        if (!emptyLine(lines[i])) {
+            if (i != lines.length - 1) {
+                if (lines[i + 1].action == '+' || lines[i + 1].action == '-' || lines[i + 1].action == '!') {
+                    if (lines[i + 1].action != line.action) border = true;
+                }
             }
 
-            wl = writeLine(line, lineCount, border, side);
+            if (line.action == '+' || line.action == '-' || line.action == '!') {
+                if (i == lines.length - 1 || lines[i + 1].action != line.action) border = true;
+            }
+
+            wl = writeLine(line, lineCount, border);
             linesHtml += wl.html;
+            middleHtml += wl.middle;
             numbersHtml += wl.number;
             lineCount++;
             border = false;
         }
     }
-    return { lines: linesHtml, numbers: numbersHtml, lineCount: lineCount - 1, lineByRealLine: lineByRealLine, realLineByLine: realLineByLine };
+
+    for (i = 0; i < 7; i++) {
+        middleHtml += '<div class="row number"></div>';
+        numbersHtml += '<div class="row number"></div>';
+    }
+
+    return { lines: linesHtml, middle: middleHtml, numbers: numbersHtml, lineCount: lineCount - 1, lineByRealLine: lineByRealLine, realLineByLine: realLineByLine };
 }
 
 function emptyLine(line) {
     return (line.action == '+' && line.line == '') || (line.action == '-' && line.line == '');
 }
 
-function writeLine(line, number, border, firstOrLast) {
+function writeLine(line, number, border) {
     if (line.action == '+') {
-        return { html: '<div class="row added ' + firstOrLast + '">' + safeTags(line.line) + '</div>', number: '<div class="row number ' + firstOrLast + '">' + number + '</div>' };
+        return { html: '<div class="row added' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '-') {
-        return { html: '<div class="row deleted ' + firstOrLast + '">' + safeTags(line.line) + '</div>', number: '<div class="row number ' + firstOrLast + '">' + number + '</div>' };
+        return { html: '<div class="row deleted' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '!') {
-        return { html: '<div class="row modified first-last">' + safeTags(line.line) + '</div>', number: '<div class="row number first-last">' + number + '</div>' };
+        return { html: '<div class="row modified' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
     }
-    return { html: '<div class="row ' + (border == true ? ' first">' : ';">') + safeTags(line.line) + '</div>', number: '<div class="row number ' + (border == true ? ' first;">' : ' ;">') + number + '</div>' };
+    return { html: '<div class="row' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
 }
 
 function safeTags(str) {
@@ -252,9 +271,11 @@ function setLeftRow(rowsDelta) {
     if (rowsDelta == 0) return;
 
     var c = $('#left-content').offset();
+    var m = $('#left-middle').offset();
     var l = $('#left-line').offset();
 
     $('#left-content').offset({top: c.top - 16 * rowsDelta, left: c.left});
+    $('#left-middle').offset({top: m.top - 16 * rowsDelta, left: m.left});
     $('#left-line').offset({top: l.top - 16 * rowsDelta, left: l.left});
 
     leftFirst += rowsDelta;
@@ -291,12 +312,10 @@ function scrollRight(event, delta, deltaX, deltaY) {
                 } else {
                     for (var row = rightLast; row >= rightFirst + maxRow - 1; row--) {
                         if (row <= rightLineCount - downOver) {
-                            if (leftRealLineByLine[rightLineByRealLine[row]] == leftRealLineByLine[rightLineByRealLine[row] - 1]) {
-                                if (rightLineByRealLine[row].scrolled == true) {
-                                    rightLineByRealLine[row].scrolled = false;
-                                    row = -1;
-                                    break;
-                                }
+                            if (rightLineByRealLine[row].scrolled == true) {
+                                rightLineByRealLine[row].scrolled = false;
+                                row = -1;
+                                break;
                             }
                         }
                     }
@@ -312,19 +331,101 @@ function scrollRight(event, delta, deltaX, deltaY) {
     $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount + ';   ' + rightOver);
 
     event.preventDefault();
+
+    writeConnections();
 }
 
 function setRightRow(rowsDelta) {
     if (rowsDelta == 0) return;
 
     var c = $('#right-content').offset();
+    var m = $('#right-middle').offset();
     var r = $('#right-line').offset();
 
     $('#right-content').offset({top: c.top - 16 * rowsDelta, left: c.left});
+    $('#right-middle').offset({top: m.top - 16 * rowsDelta, left: m.left});
     $('#right-line').offset({top: r.top - 16 * rowsDelta, left: r.left});
 
     rightFirst += rowsDelta;
     rightLast += rowsDelta;
+}
+
+function writeConnections() {
+    var example = document.getElementById("middle");
+    var ctx = example.getContext('2d');
+
+    ctx.fillStyle = "#f0f0f0";
+    ctx.fillRect(0, 0, 30, 640);
+
+    var lines = _diff.left;
+
+    var inside = false;
+    var action = '';
+
+    var x1, y1, x2, y2, x3, y3, x4, y4;
+
+    for (var i = 0; i < lines.length; i++) {
+        var l = lines[i];
+        if (typeof l.action != 'undefined') {
+            if (inside && action != l.action) {
+                x4 = 0.5;
+                y4 = (leftRealLineByLine[l.number].number - leftFirst) * 16 - 0.5;
+                x3 = 29.5;
+                y3 = (rightRealLineByLine[l.number].number - rightFirst) * 16 - 0.5;
+                fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4);
+                inside = false;
+            }
+
+            if (!inside) {
+                inside = true;
+                action = l.action;
+                x1 = 0.5;
+                y1 = (leftRealLineByLine[l.number].number - leftFirst) * 16 - 0.5;
+                x2 = 29.5;
+                y2 = (rightRealLineByLine[l.number].number - rightFirst) * 16 - 0.5;
+            }
+        } else {
+            if (inside) {
+                x4 = 0.5;
+                y4 = (leftRealLineByLine[l.number].number - leftFirst) * 16 - 0.5;
+                x3 = 29.5;
+                y3 = (rightRealLineByLine[l.number].number - rightFirst) * 16 - 0.5;
+                fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4);
+                inside = false;
+            }
+        }
+    }
+}
+
+function fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4) {
+    ctx.beginPath();
+
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x3, y3);
+    ctx.lineTo(x4, y4);
+    ctx.lineTo(x1, y1);
+
+    if (action == '-') ctx.fillStyle = "#a9a9a9";
+    if (action == '+') ctx.fillStyle = "#98fcb7";
+    if (action == '!') ctx.fillStyle = "#bfd5ff";
+
+    ctx.fill();
+
+    ctx.closePath();
+
+    ctx.beginPath();
+
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.moveTo(x3, y3);
+    ctx.lineTo(x4, y4);
+
+    ctx.strokeStyle = "#acacac";
+
+    ctx.stroke();
+
+    ctx.closePath();
 }
 
 $(document).keydown(function (event) {
@@ -357,24 +458,29 @@ function loadTestDiff() {
 
 <div style="clear: both; margin-bottom: 4px;"></div>
 
-<div id="diff" style="width: 1342px; height: 600px;">
+<div id="diff">
 
-    <div id="left" style="width: 654px; height: 640px; float: left; border: solid 1px #acacac; overflow: hidden;">
+    <div id="left" style="width: 654px; height: 639px; float: left; border: solid 1px #acacac; overflow: hidden;">
         <div id="left-scroll"
-             style="width: 20px; height: 640px; background-color: #f3f3f3; float: left; border-right: solid 1px #acacac;"></div>
+             style="width: 20px; height: 639px; background-color: #f3f3f3; float: left; border-right: solid 1px #acacac;"></div>
         <div id="left-line"
              style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
-        <div style="width: 30px; height: 640px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
+        <div id="left-middle"
+             style="width: 30px; height: 639px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
         <div id="left-content" style="overflow: hidden;"></div>
     </div>
 
+    <canvas id="middle" width="30" height="639"
+            style="float: left; border-top: solid 1px #acacac; border-bottom: solid 1px #acacac;"></canvas>
+
     <div id="right"
-         style="width: 654px; height: 640px; float: left; border: solid 1px #acacac; overflow: hidden; margin-left: 30px;">
+         style="width: 654px; height: 639px; float: left; border: solid 1px #acacac; overflow: hidden;">
         <div id="right-line"
              style="background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac; direction: rtl;"></div>
-        <div style="width: 30px; height: 640px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
+        <div id="right-middle"
+             style="width: 30px; height: 639px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
         <div id="right-scroll"
-             style="width: 20px; height: 640px; background-color: #f3f3f3; float: right; border-left: solid 1px #acacac;"></div>
+             style="width: 20px; height: 639px; background-color: #f3f3f3; float: right; border-left: solid 1px #acacac;"></div>
         <div id="right-content" style="overflow: hidden;"></div>
     </div>
 
