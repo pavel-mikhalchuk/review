@@ -101,7 +101,6 @@ var leftFirst = 1;
 var leftLast = 40;
 var leftLineByRealLine = {};
 var leftRealLineByLine = {};
-var leftOver = 0;
 
 var rightByLine = {}; //
 var rightByRealLine = {}; //
@@ -110,7 +109,6 @@ var rightFirst = 1;
 var rightLast = 40;
 var rightLineByRealLine = {};
 var rightRealLineByLine = {};
-var rightOver = 0;
 
 var maxRow = 20;
 var downOver = 6;
@@ -118,7 +116,7 @@ var downOver = 6;
 function diff(diff) {
     _diff = diff;
 
-    var left = writeSide(diff.left);
+    var left = writeSide(diff.left, 'left');
     $('#left-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + left.lines + '</pre>');
     $('#left-middle').html('<pre style="margin: 0; color: #a52a2a;">' + left.middle + '</pre>');
     $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
@@ -126,11 +124,10 @@ function diff(diff) {
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
     setLeftRow(1 - leftFirst);
-    leftOver = 0;
     $('#left').unmousewheel(scrollLeft);
     $('#left').mousewheel(scrollLeft);
 
-    var right = writeSide(diff.right);
+    var right = writeSide(diff.right, 'right');
     $('#right-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + right.lines + '</pre>');
     $('#right-middle').html('<pre style="margin: 0; color: #a52a2a;">' + right.middle + '</pre>');
     $('#right-line').html('<pre style="margin: 0; color: #a52a2a;">' + right.numbers + '</pre>');
@@ -138,14 +135,16 @@ function diff(diff) {
     rightLineByRealLine = right.lineByRealLine;
     rightRealLineByLine = right.realLineByLine;
     setRightRow(1 - rightFirst);
-    rightOver = 0;
     $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
+
+    setScrolledLeft(1);
+    setScrolledRight(1);
 
     writeConnections();
 }
 
-function writeSide(lines) {
+function writeSide(lines, side) {
     var border = false;
 
     var lineByRealLine = {};
@@ -156,7 +155,7 @@ function writeSide(lines) {
     lineByRealLine['1'] = {'number': 1, 'scrolled': false};
     realLineByLine['1'] = {'number': 1, 'scrolled': false};
 
-    var wl = writeLine(line, lineCount, (lines[1].action == '+' || lines[1].action == '-' || lines[1].action == '!'));
+    var wl = writeLine(line, lineCount, (lines[1].action == '+' || lines[1].action == '-' || lines[1].action == '!'), 1, side);
     var linesHtml = wl.html;
     var middleHtml = wl.middle;
     var numbersHtml = wl.number;
@@ -178,7 +177,7 @@ function writeSide(lines) {
                 if (i == lines.length - 1 || lines[i + 1].action != line.action) border = true;
             }
 
-            wl = writeLine(line, lineCount, border);
+            wl = writeLine(line, lineCount, border, i + 1, side);
             linesHtml += wl.html;
             middleHtml += wl.middle;
             numbersHtml += wl.number;
@@ -199,15 +198,15 @@ function emptyLine(line) {
     return (line.action == '+' && line.line == '') || (line.action == '-' && line.line == '');
 }
 
-function writeLine(line, number, border) {
+function writeLine(line, number, border, i, id) {
     if (line.action == '+') {
-        return { html: '<div class="row added' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '-') {
-        return { html: '<div class="row deleted' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '!') {
-        return { html: '<div class="row modified' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
     }
-    return { html: '<div class="row' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
+    return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
 }
 
 function safeTags(str) {
@@ -226,12 +225,11 @@ function scrollLeft(event, delta, deltaX, deltaY) {
     if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + downOver) rowsDelta = 0;
 
     if (rowsDelta != 0) {
-        if (leftOver != 0) {
-            leftOver += rowsDelta;
-        } else {
-            if (rightLast + rowsDelta <= rightLineCount + downOver && rightFirst + rowsDelta > 0) {
-                if (rowsDelta > 0) {
-                    for (var row = leftFirst; row <= leftFirst + maxRow; row++) {
+        if (rightLast + rowsDelta <= rightLineCount + downOver && rightFirst + rowsDelta > 0) {
+            var row;
+            if (rowsDelta > 0) {
+                if (rightLast != rightLineCount + downOver) {
+                    for (row = leftFirst; row <= leftFirst + maxRow; row++) {
                         if (rightRealLineByLine[leftLineByRealLine[row].number].number == rightRealLineByLine[leftLineByRealLine[row].number + 1].number) {
                             if (leftLineByRealLine[row].scrolled == false) {
                                 leftLineByRealLine[row].scrolled = true;
@@ -240,31 +238,56 @@ function scrollLeft(event, delta, deltaX, deltaY) {
                             }
                         }
                     }
-                    if (row != -1) setRightRow(rowsDelta);
                 } else {
-                    for (var row = leftLast; row >= leftFirst + maxRow - 1; row--) {
-                        if (row <= leftLineCount - downOver) {
-                            if (rightRealLineByLine[leftLineByRealLine[row]] == rightRealLineByLine[leftLineByRealLine[row] - 1]) {
-                                if (leftLineByRealLine[row].scrolled == true) {
-                                    leftLineByRealLine[row].scrolled = false;
-                                    row = -1;
-                                    break;
-                                }
+                    for (row = leftFirst + maxRow; row <= leftLast; row++) {
+                        if (rightRealLineByLine[leftLineByRealLine[row].number].number == rightRealLineByLine[leftLineByRealLine[row].number + 1].number) {
+                            if (leftLineByRealLine[row].scrolled == false) {
+                                leftLineByRealLine[row].scrolled = true;
+                                row = -1;
+                                break;
                             }
                         }
                     }
-                    if (row != -1) setRightRow(rowsDelta);
                 }
+                if (row != -1) row--;
             } else {
-                leftOver += rowsDelta;
+                if (rightFirst != 1) {
+                    for (row = leftLast; row >= leftFirst + maxRow - 1; row--) {
+                        if (row <= leftLineCount - downOver) {
+                            if (leftLineByRealLine[row].scrolled == true) {
+                                leftLineByRealLine[row].scrolled = false;
+                                row = -1;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    for (row = leftLast + maxRow - 1; row >= leftFirst; row--) {
+                        if (row <= leftLineCount - downOver) {
+                            if (leftLineByRealLine[row].scrolled == true) {
+                                leftLineByRealLine[row].scrolled = false;
+                                row = -1;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (row != -1) row++;
+            }
+            if (row != -1) {
+                setRightRow((leftLineByRealLine[row].number - rightLineByRealLine[rightFirst + (row - leftFirst)].number) + rowsDelta);
+                setScrolledRight(row);
             }
         }
         setLeftRow(rowsDelta);
+
     }
 
-    $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount + ";  " + leftOver);
+    $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount);
 
     event.preventDefault();
+
+    writeConnections();
 }
 
 function setLeftRow(rowsDelta) {
@@ -282,6 +305,16 @@ function setLeftRow(rowsDelta) {
     leftLast += rowsDelta;
 }
 
+function setScrolledLeft(row) {
+    var r = leftRealLineByLine[rightLineByRealLine[row].number].number;
+    for (var i = 1; i < leftLineCount; i++) {
+        if (rightRealLineByLine[leftLineByRealLine[i].number].number == rightRealLineByLine[leftLineByRealLine[i].number + 1].number) {
+            leftLineByRealLine[i].scrolled = i < r;
+//            $('#middle-left-' + i).html(i < r);
+        }
+    }
+}
+
 function scrollRight(event, delta, deltaX, deltaY) {
     var rowsDelta = 0;
 
@@ -294,41 +327,62 @@ function scrollRight(event, delta, deltaX, deltaY) {
     if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + downOver) rowsDelta = 0;
 
     if (rowsDelta != 0) {
-        if (rightOver != 0) {
-            rightOver += rowsDelta;
-        } else {
-            if (leftLast + rowsDelta <= leftLineCount + downOver && leftFirst + rowsDelta > 0) {
-                if (rowsDelta > 0) {
-                    for (var row = rightFirst; row <= rightFirst + maxRow; row++) {
-                        if (leftRealLineByLine[rightLineByRealLine[row].number].number == leftRealLineByLine[rightLineByRealLine[row].number + 1].number) {
-                            if (rightLineByRealLine[row].scrolled == false) {
-                                rightLineByRealLine[row].scrolled = true;
-                                row = -1;
-                                break;
-                            }
+        if (rowsDelta > 0) {
+            var row;
+            if (leftLast != leftLineCount + downOver) {
+                for (row = rightFirst; row <= rightFirst + maxRow; row++) {
+                    if (leftRealLineByLine[rightLineByRealLine[row].number].number == leftRealLineByLine[rightLineByRealLine[row].number + 1].number) {
+                        if (rightLineByRealLine[row].scrolled == false) {
+                            rightLineByRealLine[row].scrolled = true;
+                            row = -1;
+                            break;
                         }
                     }
-                    if (row != -1) setLeftRow(rowsDelta);
-                } else {
-                    for (var row = rightLast; row >= rightFirst + maxRow - 1; row--) {
-                        if (row <= rightLineCount - downOver) {
-                            if (rightLineByRealLine[row].scrolled == true) {
-                                rightLineByRealLine[row].scrolled = false;
-                                row = -1;
-                                break;
-                            }
-                        }
-                    }
-                    if (row != -1) setLeftRow(rowsDelta);
                 }
             } else {
-                rightOver += rowsDelta;
+                for (row = rightFirst + maxRow; row <= rightLast; row++) {
+                    if (leftRealLineByLine[rightLineByRealLine[row].number].number == leftRealLineByLine[rightLineByRealLine[row].number + 1].number) {
+                        if (rightLineByRealLine[row].scrolled == false) {
+                            rightLineByRealLine[row].scrolled = true;
+                            row = -1;
+                            break;
+                        }
+                    }
+                }
             }
+            if (row != -1) row--;
+        } else {
+            if (leftFirst != 1) {
+                for (row = rightLast; row >= rightFirst + maxRow - 1; row--) {
+                    if (row <= rightLineCount - downOver) {
+                        if (rightLineByRealLine[row].scrolled == true) {
+                            rightLineByRealLine[row].scrolled = false;
+                            row = -1;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                for (row = rightFirst + maxRow - 1; row >= rightFirst; row--) {
+                    if (row <= rightLineCount - downOver) {
+                        if (rightLineByRealLine[row].scrolled == true) {
+                            rightLineByRealLine[row].scrolled = false;
+                            row = -1;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (row != -1) row++;
+        }
+        if (row != -1) {
+            setLeftRow((rightLineByRealLine[row].number - leftLineByRealLine[leftFirst + (row - rightFirst)].number) + rowsDelta);
+            setScrolledLeft(row);
         }
         setRightRow(rowsDelta);
     }
 
-    $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount + ';   ' + rightOver);
+    $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount);
 
     event.preventDefault();
 
@@ -348,6 +402,16 @@ function setRightRow(rowsDelta) {
 
     rightFirst += rowsDelta;
     rightLast += rowsDelta;
+}
+
+function setScrolledRight(row) {
+    var r = rightRealLineByLine[leftLineByRealLine[row].number].number;
+    for (var i = 1; i < rightLineCount; i++) {
+        if (leftRealLineByLine[rightLineByRealLine[i].number].number == leftRealLineByLine[rightLineByRealLine[i].number + 1].number) {
+            rightLineByRealLine[i].scrolled = i < r;
+//            $('#middle-right-' + i).html((i < r) + '');
+        }
+    }
 }
 
 function writeConnections() {
@@ -493,6 +557,10 @@ function loadTestDiff() {
 
 <input type="button" onclick="loadLog();"/>
 <input type="button" onclick="loadTestDiff();"/>
+
+<div id="l-o"></div>
+</br>
+<div id="r-o"></div>
 
 </body>
 </html>
