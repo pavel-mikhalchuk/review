@@ -42,6 +42,30 @@
     .last {
         border-bottom: solid 1px #acacac;
     }
+
+    #right-scroller {
+        width: 8px;
+        background-color: #c1c1c1;
+        float: right;
+        opacity: 0.4;
+        cursor: pointer;
+    }
+
+    #right-scroller:hover {
+        opacity: 0.7;
+    }
+
+    #left-scroller {
+        width: 8px;
+        background-color: #c1c1c1;
+        float: left;
+        opacity: 0.4;
+        cursor: pointer;
+    }
+
+    #left-scroller:hover {
+        opacity: 0.7;
+    }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
@@ -113,6 +137,8 @@ var rightRealLineByLine = {};
 var maxRow = 20;
 var downOver = 6;
 
+var locked = false;
+
 function diff(diff) {
     _diff = diff;
 
@@ -123,6 +149,7 @@ function diff(diff) {
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
+    initLeftScroller();
     setLeftRow(1 - leftFirst);
     $('#left').unmousewheel(scrollLeft);
     $('#left').mousewheel(scrollLeft);
@@ -134,6 +161,7 @@ function diff(diff) {
     rightLineCount = right.lineCount;
     rightLineByRealLine = right.lineByRealLine;
     rightRealLineByLine = right.realLineByLine;
+    initRightScroller();
     setRightRow(1 - rightFirst);
     $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
@@ -142,6 +170,16 @@ function diff(diff) {
     setScrolledRight(1);
 
     writeConnections();
+
+    $(document).mouseup(function () {
+        locked = false;
+    });
+
+    $(document).mousemove(function (e) {
+        if (locked) {
+
+        }
+    });
 }
 
 function writeSide(lines, side) {
@@ -196,6 +234,22 @@ function writeSide(lines, side) {
 
 function emptyLine(line) {
     return (line.action == '+' && line.line == '') || (line.action == '-' && line.line == '');
+}
+
+function initLeftScroller() {
+    $('#left-scroll').html('<div id="left-scroller" ></div>');
+    $('#left-scroller').height(Math.floor(640 * 640 / (16 * (leftLineCount + downOver))));
+    $('#left-scroller').mousedown(function () {
+        locked = true;
+    });
+}
+
+function initRightScroller() {
+    $('#right-scroll').html('<div id="right-scroller" ></div>');
+    $('#right-scroller').height(Math.floor(640 * 640 / (16 * (rightLineCount + downOver))));
+    $('#right-scroller').mousedown(function () {
+        locked = true;
+    });
 }
 
 function writeLine(line, number, border, i, id) {
@@ -253,7 +307,7 @@ function scrollLeft(event, delta, deltaX, deltaY) {
             } else {
                 if (rightFirst != 1) {
                     for (row = leftLast; row >= leftFirst + maxRow - 1; row--) {
-                        if (row <= leftLineCount - downOver) {
+                        if (row <= leftLast - downOver) {
                             if (leftLineByRealLine[row].scrolled == true) {
                                 leftLineByRealLine[row].scrolled = false;
                                 row = -1;
@@ -263,7 +317,7 @@ function scrollLeft(event, delta, deltaX, deltaY) {
                     }
                 } else {
                     for (row = leftLast + maxRow - 1; row >= leftFirst; row--) {
-                        if (row <= leftLineCount - downOver) {
+                        if (row <= leftLast - downOver) {
                             if (leftLineByRealLine[row].scrolled == true) {
                                 leftLineByRealLine[row].scrolled = false;
                                 row = -1;
@@ -296,10 +350,12 @@ function setLeftRow(rowsDelta) {
     var c = $('#left-content').offset();
     var m = $('#left-middle').offset();
     var l = $('#left-line').offset();
+    var s = $('#left-scroller').offset();
 
     $('#left-content').offset({top: c.top - 16 * rowsDelta, left: c.left});
     $('#left-middle').offset({top: m.top - 16 * rowsDelta, left: m.left});
     $('#left-line').offset({top: l.top - 16 * rowsDelta, left: l.left});
+    $('#left-scroller').offset({top: s.top + (640 / (leftLineCount + downOver) * rowsDelta), left: s.left});
 
     leftFirst += rowsDelta;
     leftLast += rowsDelta;
@@ -354,7 +410,7 @@ function scrollRight(event, delta, deltaX, deltaY) {
         } else {
             if (leftFirst != 1) {
                 for (row = rightLast; row >= rightFirst + maxRow - 1; row--) {
-                    if (row <= rightLineCount - downOver) {
+                    if (row <= rightLast - downOver) {
                         if (rightLineByRealLine[row].scrolled == true) {
                             rightLineByRealLine[row].scrolled = false;
                             row = -1;
@@ -364,7 +420,7 @@ function scrollRight(event, delta, deltaX, deltaY) {
                 }
             } else {
                 for (row = rightFirst + maxRow - 1; row >= rightFirst; row--) {
-                    if (row <= rightLineCount - downOver) {
+                    if (row <= rightLast - downOver) {
                         if (rightLineByRealLine[row].scrolled == true) {
                             rightLineByRealLine[row].scrolled = false;
                             row = -1;
@@ -395,10 +451,12 @@ function setRightRow(rowsDelta) {
     var c = $('#right-content').offset();
     var m = $('#right-middle').offset();
     var r = $('#right-line').offset();
+    var s = $('#right-scroller').offset();
 
     $('#right-content').offset({top: c.top - 16 * rowsDelta, left: c.left});
     $('#right-middle').offset({top: m.top - 16 * rowsDelta, left: m.left});
     $('#right-line').offset({top: r.top - 16 * rowsDelta, left: r.left});
+    $('#right-scroller').offset({top: s.top + (640 / (rightLineCount + downOver) * rowsDelta), left: s.left});
 
     rightFirst += rowsDelta;
     rightLast += rowsDelta;
@@ -557,10 +615,6 @@ function loadTestDiff() {
 
 <input type="button" onclick="loadLog();"/>
 <input type="button" onclick="loadTestDiff();"/>
-
-<div id="l-o"></div>
-</br>
-<div id="r-o"></div>
 
 </body>
 </html>
