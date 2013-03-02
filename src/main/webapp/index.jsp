@@ -137,7 +137,9 @@ var rightRealLineByLine = {};
 var maxRow = 20;
 var downOver = 6;
 
-var locked = false;
+var leftLocked = false;
+var rightLocked = false;
+var prevY = 0;
 
 function diff(diff) {
     _diff = diff;
@@ -172,14 +174,43 @@ function diff(diff) {
     writeConnections();
 
     $(document).mouseup(function () {
-        locked = false;
+        leftLocked = false;
+        rightLocked = false;
     });
 
     $(document).mousemove(function (e) {
-        if (locked) {
-
+        if (leftLocked) {
+            moveLeftScroller(e);
+        } else if (rightLocked) {
+            moveRightScroller(e);
         }
     });
+}
+
+function moveLeftScroller(e) {
+    if (Math.abs(e.pageY - prevY) * (leftLineCount / 640) > 1) {
+        var d = (e.pageY - prevY) * (leftLineCount / 640);
+        var rowsDelta = e.pageY - prevY > 0 ? Math.floor(d) : Math.ceil(d);
+        $('#left-out').html('ssss~~~ ' + d + ' - ' + rowsDelta);
+        if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + downOver) rowsDelta = 0;
+        if (rowsDelta != 0) {
+            scrollLeftByDelta(rowsDelta);
+            prevY = e.pageY;
+        }
+    }
+}
+
+function moveRightScroller(e) {
+    if (Math.abs(e.pageY - prevY) * (rightLineCount / 640) > 1) {
+        var d = (e.pageY - prevY) * (rightLineCount / 640);
+        var rowsDelta = e.pageY - prevY > 0 ? Math.floor(d) : Math.ceil(d);
+        $('#right-out').html('ssss~~~ ' + d + ' - ' + rowsDelta);
+        if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + downOver) rowsDelta = 0;
+        if (rowsDelta != 0) {
+            scrollRightByDelta(rowsDelta);
+            prevY = e.pageY;
+        }
+    }
 }
 
 function writeSide(lines, side) {
@@ -239,16 +270,20 @@ function emptyLine(line) {
 function initLeftScroller() {
     $('#left-scroll').html('<div id="left-scroller" ></div>');
     $('#left-scroller').height(Math.floor(640 * 640 / (16 * (leftLineCount + downOver))));
-    $('#left-scroller').mousedown(function () {
-        locked = true;
+    $('#left-scroller').mousedown(function (e) {
+        leftLocked = true;
+        prevY = e.pageY;
+        e.preventDefault();
     });
 }
 
 function initRightScroller() {
     $('#right-scroll').html('<div id="right-scroller" ></div>');
     $('#right-scroller').height(Math.floor(640 * 640 / (16 * (rightLineCount + downOver))));
-    $('#right-scroller').mousedown(function () {
-        locked = true;
+    $('#right-scroller').mousedown(function (e) {
+        rightLocked = true;
+        prevY = e.pageY;
+        e.preventDefault();
     });
 }
 
@@ -276,6 +311,10 @@ function scrollLeft(event, delta, deltaX, deltaY) {
         rowsDelta += -1;
     }
 
+    scrollLeftByDelta(rowsDelta);
+}
+
+function scrollLeftByDelta(rowsDelta) {
     if (rowsDelta == 0 || leftFirst + rowsDelta <= 0 || leftLast + rowsDelta > leftLineCount + downOver) rowsDelta = 0;
 
     if (rowsDelta != 0) {
@@ -380,6 +419,10 @@ function scrollRight(event, delta, deltaX, deltaY) {
         rowsDelta += -1;
     }
 
+    scrollRightByDelta(rowsDelta)
+}
+
+function scrollRightByDelta(rowsDelta) {
     if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + downOver) rowsDelta = 0;
 
     if (rowsDelta != 0) {
