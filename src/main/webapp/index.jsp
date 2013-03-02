@@ -268,23 +268,77 @@ function emptyLine(line) {
 }
 
 function initLeftScroller() {
-    $('#left-scroll').html('<div id="left-scroller" ></div>');
+    $('#left-scroll').html('<div id="left-scroller"></div>');
     $('#left-scroller').height(Math.floor(640 * 640 / (16 * (leftLineCount + downOver))));
     $('#left-scroller').mousedown(function (e) {
         leftLocked = true;
         prevY = e.pageY;
         e.preventDefault();
     });
+
+    var changes = '';
+    var rowHeight = 640 / (leftLineCount + downOver);
+    for (var i = 0; i < _diff.left.length; i++) {
+        var l = _diff.left[i];
+        if (l.action == '!') {
+            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; margin-left: 13px; background-color: #bfd5ff; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
+        } else if (l.action == '+' && l.line == '') {
+            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; margin-left: 13px; background-color: #98fcb7; position: absolute; width: 4px; height: ' + 3 + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
+        } else if (l.action == '-') {
+            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; margin-left: 13px; background-color: #a9a9a9; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
+        }
+    }
+    $('#left-scroll').append(changes);
+}
+
+function moveToLeftRow(row) {
+    var delta = row - (leftFirst + maxRow);
+    if (delta > 0) {
+        for (var i = 0; i < delta; i++) {
+            scrollLeftByDelta(1);
+        }
+    } else if (delta < 0) {
+        for (var i = 0; i > delta; i--) {
+            scrollLeftByDelta(-1);
+        }
+    }
 }
 
 function initRightScroller() {
-    $('#right-scroll').html('<div id="right-scroller" ></div>');
+    $('#right-scroll').html('<div id="right-scroller" style="position: relative;"></div>');
     $('#right-scroller').height(Math.floor(640 * 640 / (16 * (rightLineCount + downOver))));
     $('#right-scroller').mousedown(function (e) {
         rightLocked = true;
         prevY = e.pageY;
         e.preventDefault();
     });
+
+    var changes = '';
+    var rowHeight = 640 / (rightLineCount + downOver);
+    for (var i = 0; i < _diff.right.length; i++) {
+        var l = _diff.right[i];
+        if (l.action == '!') {
+            changes += '<div onclick="moveToRightRow(' + rightRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; background-color: #bfd5ff; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (rightRealLineByLine[l.number].number) + 'px;"></div>';
+        } else if (l.action == '+') {
+            changes += '<div onclick="moveToRightRow(' + rightRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; background-color: #98fcb7; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (rightRealLineByLine[l.number].number) + 'px;"></div>';
+        } else if (l.action == '-') {
+            changes += '<div onclick="moveToRightRow(' + rightRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; background-color: #a9a9a9; position: absolute; width: 4x; height: ' + 3 + 'px; top: ' + rowHeight * (rightRealLineByLine[l.number].number) + 'px;"></div>';
+        }
+    }
+    $('#right-scroll').append(changes);
+}
+
+function moveToRightRow(row) {
+    var delta = row - (rightFirst + maxRow);
+    if (delta > 0) {
+        for (var i = 0; i < delta; i++) {
+            scrollRightByDelta(1);
+        }
+    } else if (delta < 0) {
+        for (var i = 0; i > delta; i--) {
+            scrollRightByDelta(-1);
+        }
+    }
 }
 
 function writeLine(line, number, border, i, id) {
@@ -627,7 +681,7 @@ function loadTestDiff() {
 
     <div id="left" style="width: 654px; height: 639px; float: left; border: solid 1px #acacac; overflow: hidden;">
         <div id="left-scroll"
-             style="width: 20px; height: 639px; background-color: #f3f3f3; float: left; border-right: solid 1px #acacac;"></div>
+             style="width: 20px; height: 639px; background-color: #f9f9f9; float: left; border-right: solid 1px #e6e6e6;"></div>
         <div id="left-line"
              style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
         <div id="left-middle"
@@ -645,7 +699,7 @@ function loadTestDiff() {
         <div id="right-middle"
              style="width: 30px; height: 639px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
         <div id="right-scroll"
-             style="width: 20px; height: 639px; background-color: #f3f3f3; float: right; border-left: solid 1px #acacac;"></div>
+             style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6;"></div>
         <div id="right-content" style="overflow: hidden;"></div>
     </div>
 
