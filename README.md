@@ -6,6 +6,7 @@ Review
 
 TODO:
 
+0. horizontal scrolling
 1. line-diff
 2. keywords
 3. set first changed line
