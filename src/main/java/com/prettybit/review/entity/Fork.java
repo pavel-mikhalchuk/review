@@ -1,19 +1,18 @@
 package com.prettybit.review.entity;
 
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import org.apache.commons.lang.ArrayUtils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * @author Pavel Mikhalchuk
@@ -45,85 +44,212 @@ public class Fork extends JFrame {
     }
 
     protected static String cutPointsRegExp() {
-        List<String> rel = new LinkedList<String>();
+        List<String> result = new LinkedList<String>();
         for (String point : CUT_POINTS) {
-            rel.add(String.format(RET, point, point));
+            result.add(String.format(RET, point, point));
         }
-        return Joiner.on("|").join(rel);
+        return Joiner.on("|").join(result);
     }
 
     public static void main(String[] args) {
         new Fork("", "").run();
     }
 
-    private Map<Integer, String> toMap(String[] s) {
-        Map<Integer, String> map = new TreeMap<Integer, String>();
-        for (int i = 0; i < s.length; i++) {
-            map.put(i, s[i]);
-        }
-        return map;
-    }
+//    private String[] lm = cut("protected abstract void doIncrementalIndex(Multimap<Long, Long> itemsByAccount);");
+//    private String[] rm = cut("protected abstract void doIncrementalIndex(Integer dbShardIndex, Multimap<Long, Long> itemsByAccount);");
 
-    private Map<Integer, String> lm = toMap(cut("protected abstract void doIncrementalIndex(Multimap<Long, Long> itemsByAccount);"));
-    private Map<Integer, String> rm = toMap(cut("protected abstract void doIncrementalIndex(Integer dbShardIndex, Multimap<Long, Long> itemsByAccount);"));
+//    private String[] lm = cut("DateRangeMessage message = DateRangeMessage.byteBufferToMessage(byteBuffer, DateRangeMessage.class);");
+//    private String[] rm = cut("IncrementalIndexMessage message = IncrementalIndexMessage.byteBufferToMessage(byteBuffer, IncrementalIndexMessage.class);");
 
-    private Map<Integer, String> lmd = new HashMap<Integer, String>(lm);
+    private String[] lm = cut("return Constants.DUMMY_PATH.equals(asset.getAssetOriginalPath() != null ? asset.getAssetOriginalPath().trim() : asset.getAssetOriginalPath());");
+    private String[] rm = cut("return Constants.DUMMY_PATH.equals(path != null ? path.trim() : path);");
+
+//    private String[] lm = cut("a b c");
+//    private String[] rm = cut(" b b c ");
 
     private void run() {
         drawWindow();
 
-        Multimap<Integer, WList> vars = LinkedHashMultimap.create();
+        Graph g = new Graph(lm, rm);
+        g.dijkstra();
 
-        List<Map.Entry<Integer, String>> es = new ArrayList<Map.Entry<Integer, String>>(rm.entrySet());
+//        System.out.println("Cost: " + g.node(lm.length, rm.length).minPathCost);
+//        System.out.println("Path: " + g.node(lm.length, rm.length).minPath);
 
-        int i = 1;
+//        System.out.println("Sol: " + Collections2.transform(Collections2.filter(g.node(lm.length, rm.length).minPath, new Predicate<Graph.Edge>() {
+//            @Override
+//            public boolean apply(Graph.Edge c) { return c.isDiagonal(); }
+//        }), new Function<Graph.Edge, Object>() {
+//            @Override
+//            public Object apply(Graph.Edge c) {
+//                return c.x2().x + "(" + c.x2 + ")";
+//            }
+//        }));
 
-        while (!es.isEmpty()) {
-            WList w = calc(i++, es);
-            vars.put(w.size(), w);
+        Collection<Graph.Node> mp = Collections2.transform(Collections2.filter(g.node(lm.length, rm.length).minPath,
+                new Predicate<Graph.Edge>() {
+                    @Override
+                    public boolean apply(Graph.Edge c) {
+                        return c.isDiagonal();
+                    }
+                }), new Function<Graph.Edge, Graph.Node>() {
+            @Override
+            public Graph.Node apply(Graph.Edge d) {
+                return d.x2();
+            }
+        });
 
-            es.remove(0);
-            lmd = new HashMap<Integer, String>(lm);
+        WList wl = new WList(1);
+
+        for (Graph.Node ddd : mp) {
+            wl.add(new W(ddd.xi, ddd.yi, ddd.x));
         }
 
-        int maxOverLap = 0;
-        for (Integer overLap : vars.keySet()) {
-            maxOverLap = Math.max(maxOverLap, overLap);
+        addSides(wl);
+    }
+
+    private class Graph {
+
+        private String[] x;
+        private String[] y;
+
+        private Node[][] g;
+
+        private Graph(String[] x, String[] y) {
+            this.x = x;
+            this.y = y;
+            build();
         }
 
-        for (Integer k : vars.keySet()) {
-            for (WList w : vars.get(k)) {
-                addSides(maxOverLap, w);
+        public void dijkstra() {
+            node(0, 0).minPathCost = 0;
+            doDijkstra(g[0][0]);
+        }
+
+        public Node node(int x, int y) {
+            return g[x][y];
+        }
+
+        private void doDijkstra(Node node) {
+            for (Edge c : node.connections) {
+                if (c.x2().minPathCost > node.minPathCost + c.cost) {
+                    c.x2().minPathCost = node.minPathCost + c.cost;
+                    c.x2().minPath.clear();
+                    c.x2().minPath.addAll(node.minPath);
+                    c.x2().minPath.add(c);
+                }
+            }
+            node.disable();
+
+            doDijkstraForFirstEnabledNode();
+        }
+
+        private void doDijkstraForFirstEnabledNode() {
+            for (int i = 0; i <= x.length; i++) {
+                for (int j = 0; j <= y.length; j++) {
+                    if (node(i, j).isEnabled()) doDijkstra(node(i, j));
+                }
             }
         }
-    }
 
-    private WList calc(Integer i, Collection<Map.Entry<Integer, String>> entries) {
-        WList w = new WList(i);
+        private void build() {
+            g = new Node[x.length + 1][y.length + 1];
 
-        for (Map.Entry<Integer, String> re : entries) {
-            Map.Entry<Integer, String> le = findLeft(re);
-            if (le != null) {
-                removeLdBeforeIncl(le.getKey());
-                w.add(new W(le.getKey(), re.getKey(), re.getValue()));
+            for (int i = 0; i <= x.length; i++) {
+                for (int j = 0; j <= y.length; j++) {
+                    g[i][j] = new Node(this, i, i == 0 ? "0" : x[i - 1], j, j == 0 ? "0" : y[j - 1]);
+
+                    if (i != x.length) { g[i][j].connect(i + 1, j, 1); }
+                    if (i <= x.length - 1 && j <= y.length - 1 && x[i].equals(y[j])) { g[i][j].connect(i + 1, j + 1, 0); }
+                    if (j != y.length) { g[i][j].connect(i, j + 1, 1); }
+                }
             }
         }
 
-        return w;
+        private class Node {
+
+            private Graph parent;
+
+            private Integer xi;
+            private String x;
+
+            private Integer yi;
+            private String y;
+
+            private List<Edge> connections = new LinkedList<Edge>();
+
+            private Integer minPathCost = Integer.MAX_VALUE;
+            private List<Edge> minPath = new LinkedList<Edge>();
+
+            private boolean enabled = true;
+
+            public Node(Graph parent, Integer xi, String x, Integer yi, String y) {
+                this.parent = parent;
+                this.x = x;
+                this.xi = xi;
+                this.y = y;
+                this.yi = yi;
+            }
+
+            public void connect(Integer x, Integer y, Integer cost) {
+                connections.add(new Edge(parent, xi, yi, x, y, cost));
+            }
+
+            public boolean isEnabled() { return enabled; }
+
+            public void disable() { enabled = false; }
+
+            @Override
+            public String toString() {
+                return String.format("[%s, %s]", xi, yi);
+            }
+
+        }
+
+        private class Edge {
+
+            private Graph parent;
+
+            private Integer x1;
+            private Integer y1;
+
+            private Integer x2;
+            private Integer y2;
+
+            private Integer cost;
+
+            public Edge(Graph parent, Integer x1, Integer y1, Integer x2, Integer y2, Integer cost) {
+                this.parent = parent;
+                this.x1 = x1;
+                this.y1 = y1;
+                this.x2 = x2;
+                this.y2 = y2;
+                this.cost = cost;
+            }
+
+            public Node x1() {
+                return parent.node(x1, y1);
+            }
+
+            public Node x2() {
+                return parent.node(x2, y2);
+            }
+
+            public boolean isDiagonal() {
+                return x2 == x1 + 1 && y2 == y1 + 1;
+            }
+
+            @Override
+            public String toString() {
+                return x1() + ":" + x2();
+            }
+
+        }
+
     }
 
-    private void removeLdBeforeIncl(Integer i) {
-        List<Integer> is = new LinkedList<Integer>();
-        for (Integer li : lmd.keySet()) {
-            if (li <= i) is.add(li);
-        }
-        for (Integer ir : is) {
-            lmd.remove(ir);
-        }
-    }
-
-    private void addSides(int maxOverLap, WList w) {
-        getContentPane().add(new JLabel("  " + w.num() + "  "));
+    private void addSides(WList w) {
+        ppp.add(new JLabel("  " + w.num() + ":::" + w.size() + "  "));
 
         JPanel yp = new JPanel();
         yp.setLayout(new BoxLayout(yp, BoxLayout.Y_AXIS));
@@ -131,49 +257,43 @@ public class Fork extends JFrame {
         JPanel xp = new JPanel();
         xp.setLayout(new BoxLayout(xp, BoxLayout.X_AXIS));
 
-        for (Map.Entry<Integer, String> e : lm.entrySet()) {
-            if (w.hasLeft(e.getKey())) {
-                addIn(xp, e.getValue());
+        for (int i = 1; i <= lm.length; i++) {
+            if (w.hasLeft(i)) {
+                addIn(xp, lm[i - 1]);
             } else {
-                addNonIn(xp, e.getValue());
+                addNonIn(xp, lm[i - 1]);
             }
         }
 
         yp.add(xp);
 
-        if (w.size() == maxOverLap) {
-            yp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        }
+        yp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 
         xp = new JPanel();
         xp.setLayout(new BoxLayout(xp, BoxLayout.X_AXIS));
 
-        for (Map.Entry<Integer, String> e : rm.entrySet()) {
-            if (w.hasRight(e.getKey())) {
-                addIn(xp, e.getValue());
+        for (int j = 1; j <= rm.length; j++) {
+            if (w.hasRight(j)) {
+                addIn(xp, rm[j - 1]);
             } else {
-                addNonIn(xp, e.getValue());
+                addNonIn(xp, rm[j - 1]);
             }
         }
 
         yp.add(xp);
 
-        getContentPane().add(yp);
+        ppp.add(yp);
     }
 
-    private Map.Entry<Integer, String> findLeft(Map.Entry<Integer, String> re) {
-        for (Map.Entry<Integer, String> e : lmd.entrySet()) {
-            if (e.getValue().equals(re.getValue())) return e;
-        }
-        return null;
-    }
+    private JPanel ppp = new JPanel();
 
     private void drawWindow() {
         setSize(new Dimension(300, 300));
 
-        getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
+        ppp.setLayout(new BoxLayout(ppp, BoxLayout.Y_AXIS));
+        getContentPane().add(new JScrollPane(ppp));
 
         setLocationRelativeTo(null);
 
@@ -220,7 +340,7 @@ public class Fork extends JFrame {
     }
 
     private class WList {
-        private int num;
+        private Integer num;
 
         private WList(int num) {
             this.num = num;
@@ -236,7 +356,7 @@ public class Fork extends JFrame {
             r.put(w.ri, w);
         }
 
-        public int num() { return num; }
+        public Integer num() { return num; }
 
         public boolean hasLeft(Integer i) { return l.containsKey(i); }
 

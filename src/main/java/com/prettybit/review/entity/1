@@ -1,1 +1,1 @@
-a b c
+return Constants.DUMMY_PATH.equals(path != null ? path.trim() : path);

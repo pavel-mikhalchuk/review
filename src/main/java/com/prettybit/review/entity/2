@@ -1,1 +1,1 @@
- b b c
+return Constants.DUMMY_PATH.equals(asset.getAssetOriginalPath() != null ? asset.getAssetOriginalPath().trim() : asset.getAssetOriginalPath());
