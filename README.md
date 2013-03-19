@@ -20,3 +20,5 @@ TODO:
 11. external + internal projects support
 12. display creates and deletes
 13. think about scrollers dragging approach
+14. fix JSON
+15. not in VPN exception

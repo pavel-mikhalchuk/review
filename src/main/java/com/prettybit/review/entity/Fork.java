@@ -3,31 +3,32 @@ package com.prettybit.review.entity;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import org.apache.commons.lang.ArrayUtils;
 
-import javax.swing.*;
-import java.awt.*;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
+
+import static com.google.common.collect.Collections2.filter;
+import static com.google.common.collect.Collections2.transform;
 
 /**
  * @author Pavel Mikhalchuk
  */
-public class Fork extends JFrame {
+public class Fork {
 
     private static final String RET = "((?<=%s)|(?=%s))";
-    private static final String[] CUT_POINTS = {" ", "\\(", "\\)", "\\.", ";", ",", "\\{", "\\}"};
+    private static final String[] CUT_POINTS = {" ", "\\(", "\\)", "\\.", ":", ";", ",", "\\{", "\\}", "\\<", "\\>", "\\/", "\\|", "\\\\", "\\+", "\\-", "\\*"};
 
     private String l;
     private String r;
 
     public Fork(String l, String r) {
-        this.l = l;
-        this.r = r;
+        Graph g = new Graph(cut(l), cut(r));
+        g.dijkstra();
+
+        this.l = g.prettyX();
+        this.r = g.prettyY();
     }
 
     public String left() { return l; }
@@ -51,69 +52,15 @@ public class Fork extends JFrame {
         return Joiner.on("|").join(result);
     }
 
-    public static void main(String[] args) {
-        new Fork("", "").run();
-    }
-
-//    private String[] lm = cut("protected abstract void doIncrementalIndex(Multimap<Long, Long> itemsByAccount);");
-//    private String[] rm = cut("protected abstract void doIncrementalIndex(Integer dbShardIndex, Multimap<Long, Long> itemsByAccount);");
-
-//    private String[] lm = cut("DateRangeMessage message = DateRangeMessage.byteBufferToMessage(byteBuffer, DateRangeMessage.class);");
-//    private String[] rm = cut("IncrementalIndexMessage message = IncrementalIndexMessage.byteBufferToMessage(byteBuffer, IncrementalIndexMessage.class);");
-
-    private String[] lm = cut("return Constants.DUMMY_PATH.equals(asset.getAssetOriginalPath() != null ? asset.getAssetOriginalPath().trim() : asset.getAssetOriginalPath());");
-    private String[] rm = cut("return Constants.DUMMY_PATH.equals(path != null ? path.trim() : path);");
-
-//    private String[] lm = cut("a b c");
-//    private String[] rm = cut(" b b c ");
-
-    private void run() {
-        drawWindow();
-
-        Graph g = new Graph(lm, rm);
-        g.dijkstra();
-
-//        System.out.println("Cost: " + g.node(lm.length, rm.length).minPathCost);
-//        System.out.println("Path: " + g.node(lm.length, rm.length).minPath);
-
-//        System.out.println("Sol: " + Collections2.transform(Collections2.filter(g.node(lm.length, rm.length).minPath, new Predicate<Graph.Edge>() {
-//            @Override
-//            public boolean apply(Graph.Edge c) { return c.isDiagonal(); }
-//        }), new Function<Graph.Edge, Object>() {
-//            @Override
-//            public Object apply(Graph.Edge c) {
-//                return c.x2().x + "(" + c.x2 + ")";
-//            }
-//        }));
-
-        Collection<Graph.Node> mp = Collections2.transform(Collections2.filter(g.node(lm.length, rm.length).minPath,
-                new Predicate<Graph.Edge>() {
-                    @Override
-                    public boolean apply(Graph.Edge c) {
-                        return c.isDiagonal();
-                    }
-                }), new Function<Graph.Edge, Graph.Node>() {
-            @Override
-            public Graph.Node apply(Graph.Edge d) {
-                return d.x2();
-            }
-        });
-
-        WList wl = new WList(1);
-
-        for (Graph.Node ddd : mp) {
-            wl.add(new W(ddd.xi, ddd.yi, ddd.x));
-        }
-
-        addSides(wl);
-    }
-
-    private class Graph {
+    private static class Graph {
 
         private String[] x;
         private String[] y;
 
         private Node[][] g;
+
+        private String prettyX = "";
+        private String prettyY = "";
 
         private Graph(String[] x, String[] y) {
             this.x = x;
@@ -124,10 +71,30 @@ public class Fork extends JFrame {
         public void dijkstra() {
             node(0, 0).minPathCost = 0;
             doDijkstra(g[0][0]);
+
+            pretty();
         }
 
         public Node node(int x, int y) {
             return g[x][y];
+        }
+
+        public String prettyX() { return prettyX; }
+
+        public String prettyY() { return prettyY; }
+
+        private void build() {
+            g = new Node[x.length + 1][y.length + 1];
+
+            for (int i = 0; i <= x.length; i++) {
+                for (int j = 0; j <= y.length; j++) {
+                    g[i][j] = new Node(this, i, i == 0 ? "0" : x[i - 1], j, j == 0 ? "0" : y[j - 1]);
+
+                    if (i != x.length) { g[i][j].connect(i + 1, j, 1); }
+                    if (i <= x.length - 1 && j <= y.length - 1 && x[i].equals(y[j])) { g[i][j].connect(i + 1, j + 1, 0); }
+                    if (j != y.length) { g[i][j].connect(i, j + 1, 1); }
+                }
+            }
         }
 
         private void doDijkstra(Node node) {
@@ -145,25 +112,124 @@ public class Fork extends JFrame {
         }
 
         private void doDijkstraForFirstEnabledNode() {
+            Node min = null;
+
             for (int i = 0; i <= x.length; i++) {
                 for (int j = 0; j <= y.length; j++) {
-                    if (node(i, j).isEnabled()) doDijkstra(node(i, j));
+                    if (node(i, j).isEnabled()) {
+                        if (min == null || node(i, j).minPathCost < min.minPathCost) {
+                            min = node(i, j);
+                        }
+                    }
                 }
             }
+
+            if (min != null) doDijkstra(min);
+
+//            for (int i = 0; i <= x.length; i++) {
+//                for (int j = 0; j <= y.length; j++) {
+//                    if (node(i, j).isEnabled()) {
+//                        doDijkstra(node(i, j));
+//                    }
+//                }
+//            }
         }
 
-        private void build() {
-            g = new Node[x.length + 1][y.length + 1];
+        private Collection<Node> minPathMatchPoints() {
+            return transform(filter(node(x.length, y.length).minPath, Edge.ifIsDiagonal()), Edge.toX2());
+        }
 
-            for (int i = 0; i <= x.length; i++) {
-                for (int j = 0; j <= y.length; j++) {
-                    g[i][j] = new Node(this, i, i == 0 ? "0" : x[i - 1], j, j == 0 ? "0" : y[j - 1]);
+        private void pretty() {
+            int i = -1;
+            int j = -1;
 
-                    if (i != x.length) { g[i][j].connect(i + 1, j, 1); }
-                    if (i <= x.length - 1 && j <= y.length - 1 && x[i].equals(y[j])) { g[i][j].connect(i + 1, j + 1, 0); }
-                    if (j != y.length) { g[i][j].connect(i, j + 1, 1); }
+            for (Node n : minPathMatchPoints()) {
+                List<String> l = new LinkedList<String>();
+                List<String> r = new LinkedList<String>();
+
+                i++;
+                String w = x[i];
+                while (!(w.equals(n.x) && i + 1 == n.xi) && i <= x.length) {
+                    l.add(w);
+                    i++;
+                    w = x[i];
                 }
+
+                j++;
+                w = y[j];
+                while (!(w.equals(n.y) && j + 1 == n.yi) && j <= y.length) {
+                    r.add(w);
+                    j++;
+                    w = y[j];
+                }
+
+                if (!l.isEmpty() && !r.isEmpty()) {
+                    prettyX += "|$!|";
+                    for (String _w : l) {
+                        prettyX += _w;
+                    }
+                    prettyX += "|!$|";
+
+                    prettyY += "|$!|";
+                    for (String _w : r) {
+                        prettyY += _w;
+                    }
+                    prettyY += "|!$|";
+                } else if (!l.isEmpty()) {
+                    prettyX += "|$-|";
+                    for (String _w : l) {
+                        prettyX += _w;
+                    }
+                    prettyX += "|-$|";
+
+                    prettyY += "|$-||-$|";
+                } else if (!r.isEmpty()) {
+                    prettyY += "|$+|";
+                    for (String _w : r) {
+                        prettyY += _w;
+                    }
+                    prettyY += "|+$|";
+
+                    prettyX += "|$+||+$|";
+                }
+
+                prettyX += n.x;
+                prettyY += n.y;
+
+                l = new LinkedList<String>();
+                r = new LinkedList<String>();
             }
+
+            if (i < x.length - 1 && j < y.length - 1) {
+                prettyX += "|$!|";
+                for (int kkk = i + 1; kkk < x.length; kkk++) {
+                    prettyX += x[kkk];
+                }
+                prettyX += "|!$|";
+
+                prettyY += "|$!|";
+                for (int kkk = j + 1; kkk < y.length; kkk++) {
+                    prettyY += y[kkk];
+                }
+                prettyY += "|!$|";
+            } else if (i < x.length - 1) {
+                prettyX += "|$-|";
+                for (int kkk = i + 1; kkk < x.length; kkk++) {
+                    prettyX += x[kkk];
+                }
+                prettyX += "|-$|";
+
+                prettyY += "|$-||-$|";
+            } else if (j < y.length - 1) {
+                prettyY += "|$+|";
+                for (int kkk = j + 1; kkk < y.length; kkk++) {
+                    prettyY += y[kkk];
+                }
+                prettyY += "|+$|";
+
+                prettyX += "|$+||+$|";
+            }
+
         }
 
         private class Node {
@@ -206,7 +272,7 @@ public class Fork extends JFrame {
 
         }
 
-        private class Edge {
+        private static class Edge {
 
             private Graph parent;
 
@@ -244,125 +310,22 @@ public class Fork extends JFrame {
                 return x1() + ":" + x2();
             }
 
-        }
-
-    }
-
-    private void addSides(WList w) {
-        ppp.add(new JLabel("  " + w.num() + ":::" + w.size() + "  "));
-
-        JPanel yp = new JPanel();
-        yp.setLayout(new BoxLayout(yp, BoxLayout.Y_AXIS));
-
-        JPanel xp = new JPanel();
-        xp.setLayout(new BoxLayout(xp, BoxLayout.X_AXIS));
-
-        for (int i = 1; i <= lm.length; i++) {
-            if (w.hasLeft(i)) {
-                addIn(xp, lm[i - 1]);
-            } else {
-                addNonIn(xp, lm[i - 1]);
+            public static Predicate<Edge> ifIsDiagonal() {
+                return new Predicate<Graph.Edge>() {
+                    @Override
+                    public boolean apply(Graph.Edge c) { return c.isDiagonal(); }
+                };
             }
-        }
 
-        yp.add(xp);
-
-        yp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-
-        xp = new JPanel();
-        xp.setLayout(new BoxLayout(xp, BoxLayout.X_AXIS));
-
-        for (int j = 1; j <= rm.length; j++) {
-            if (w.hasRight(j)) {
-                addIn(xp, rm[j - 1]);
-            } else {
-                addNonIn(xp, rm[j - 1]);
+            public static Function<Edge, Node> toX2() {
+                return new Function<Edge, Node>() {
+                    @Override
+                    public Node apply(Edge e) { return e.x2(); }
+                };
             }
+
         }
 
-        yp.add(xp);
-
-        ppp.add(yp);
-    }
-
-    private JPanel ppp = new JPanel();
-
-    private void drawWindow() {
-        setSize(new Dimension(300, 300));
-
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-
-        ppp.setLayout(new BoxLayout(ppp, BoxLayout.Y_AXIS));
-        getContentPane().add(new JScrollPane(ppp));
-
-        setLocationRelativeTo(null);
-
-        setVisible(true);
-    }
-
-    private void addIn(JPanel panel, String s) {
-        JLabel l = new JLabel(s);
-        l.setBackground(Color.CYAN);
-        l.setForeground(Color.white);
-        l.setOpaque(true);
-        panel.add(l);
-    }
-
-    private void addNonIn(JPanel panel, String s) {
-        JLabel l = new JLabel(s);
-        l.setBackground(Color.BLUE);
-        l.setForeground(Color.white);
-        l.setOpaque(true);
-        panel.add(l);
-    }
-
-    private class W {
-        private Integer li;
-        private Integer ri;
-        private String w;
-
-        private W(Integer li, Integer ri, String w) {
-            this.li = li;
-            this.ri = ri;
-            this.w = w;
-        }
-
-        public Integer li() { return li; }
-
-        public Integer ri() { return ri; }
-
-        public String w() { return w; }
-
-        @Override
-        public String toString() {
-            return w + " " + li + ":" + ri;
-        }
-    }
-
-    private class WList {
-        private Integer num;
-
-        private WList(int num) {
-            this.num = num;
-        }
-
-        private Map<Integer, W> l = new HashMap<Integer, W>();
-        private Map<Integer, W> r = new HashMap<Integer, W>();
-        private List<W> list = new LinkedList<W>();
-
-        public void add(W w) {
-            list.add(w);
-            l.put(w.li, w);
-            r.put(w.ri, w);
-        }
-
-        public Integer num() { return num; }
-
-        public boolean hasLeft(Integer i) { return l.containsKey(i); }
-
-        public boolean hasRight(Integer i) { return r.containsKey(i); }
-
-        public int size() { return list.size(); }
     }
 
 }

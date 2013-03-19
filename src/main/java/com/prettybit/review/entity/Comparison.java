@@ -45,6 +45,12 @@ public class Comparison {
                             prevLeftLine.setAction("!");
                             prevRightLine.setAction("!");
                             prevRightLine.setLine(l.line());
+
+//                            Fork f = Fork.hit(prevLeftLine.line(), l.line());
+//
+//                            prevLeftLine.setLine(f.left());
+//                            prevRightLine.setLine(f.right());
+
                             minus = false;
                         } else {
                             i++;

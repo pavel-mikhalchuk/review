@@ -69,6 +69,7 @@
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="js/diff_match_patch_uncompressed.js"></script>
 <script type="text/javascript">
 var revMap = {};
 var ctrPressed = false;
@@ -134,15 +135,22 @@ var rightLast = 40;
 var rightLineByRealLine = {};
 var rightRealLineByLine = {};
 
-var maxRow = 20;
+var maxRow = 17;
 var downOver = 6;
 
 var leftLocked = false;
 var rightLocked = false;
 var prevY = 0;
 
+var WORDS_REG_EXP = initWordsCuttingPointsRegExp();
+
+function initWordsCuttingPointsRegExp() {
+    var points = [' ', '\\(', '\\)', '\\.', ':', ';', ',', '\\{', '\\}', '\\<', '\\>', '\\/', '\\|', '\\\\', '\\+', '\\-', '\\*'];
+    return new RegExp('(' + points.join("|") + ')', 'g')
+}
+
 function diff(diff) {
-    _diff = diff;
+    _diff = prettyDiff(diff);
 
     var left = writeSide(diff.left, 'left');
     $('#left-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + left.lines + '</pre>');
@@ -151,8 +159,8 @@ function diff(diff) {
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
-    initLeftScroller();
     setLeftRow(1 - leftFirst);
+    initLeftScroller();
     $('#left').unmousewheel(scrollLeft);
     $('#left').mousewheel(scrollLeft);
 
@@ -163,8 +171,8 @@ function diff(diff) {
     rightLineCount = right.lineCount;
     rightLineByRealLine = right.lineByRealLine;
     rightRealLineByLine = right.realLineByLine;
-    initRightScroller();
     setRightRow(1 - rightFirst);
+    initRightScroller();
     $('#right').unmousewheel(scrollRight);
     $('#right').mousewheel(scrollRight);
 
@@ -185,6 +193,139 @@ function diff(diff) {
             moveRightScroller(e);
         }
     });
+}
+
+function prettyDiff(diff) {
+    var l = diff.left;
+    var r = diff.right;
+    var d;
+
+    for (var i = 0; i < l.length; i++) {
+        if (l[i].action == '!') {
+            d = prettySides(l[i].line, r[i].line);
+            l[i].pretty = d.left;
+            r[i].pretty = d.right;
+        }
+    }
+
+    return diff;
+}
+
+function prettySides(s1, s2) {
+    return prettySidesUnicode(toUnicode(s1, s2));
+}
+
+function toUnicode(s1, s2) {
+    var w1 = toWords(s1);
+    var w2 = toWords(s2);
+
+    var start = 0x2a00;
+
+    var x = '';
+    var y = '';
+    var cache = {};
+    var mirror = {};
+
+    for (var i = 0; i < w1.length; i++) {
+        if (cache[w1[i]] == undefined) {
+            cache[w1[i]] = String.fromCharCode(start++);
+            mirror[cache[w1[i]]] = w1[i];
+        }
+        x += cache[w1[i]];
+    }
+
+    for (var j = 0; j < w2.length; j++) {
+        if (cache[w2[j]] == undefined) {
+            cache[w2[j]] = String.fromCharCode(start++);
+            mirror[cache[w2[j]]] = w2[j];
+        }
+        y += cache[w2[j]];
+    }
+
+    return { x: x, y: y, mirror: mirror }
+}
+
+function toWords(s) {
+    var array = s.split(WORDS_REG_EXP);
+    return array.length > 0 && array[0] == '' ? array.slice(1) : array;
+}
+
+function prettySidesUnicode(unicode) {
+    var dmp = new diff_match_patch();
+
+    var d = dmp.diff_main(unicode.x, unicode.y, false);
+
+    var td = [];
+    var d1 = [];
+    var d2 = [];
+
+    for (var i = 0; i < d.length; i++) {
+        if (d[i][0] == 0) {
+            if (td.length == 2) {
+                d1.push(['!', td[0][1]]);
+                d2.push(['!', td[1][1]]);
+                td = [];
+            } else if (td.length == 1) {
+                if (td[0][0] == -1) {
+                    d1.push(td[0]);
+                    d2.push([-11, '']);
+                } else if (td[0][0] == 1) {
+                    d1.push([11, '']);
+                    d2.push(td[0]);
+                }
+                td = [];
+            }
+            d1.push(d[i]);
+            d2.push(d[i]);
+        } else {
+            td.push(d[i]);
+        }
+    }
+
+    if (td.length == 2) {
+        d1.push(['!', td[0][1]]);
+        d2.push(['!', td[1][1]]);
+        td = [];
+    } else if (td.length == 1) {
+        if (td[0][0] == -1) {
+            d1.push(td[0]);
+            d2.push([-11, '']);
+        } else if (td[0][0] == 1) {
+            d1.push([11, '']);
+            d2.push(td[0]);
+        }
+        td = [];
+    }
+
+    return {left: prettySideUnicode(d1, unicode.mirror), right: prettySideUnicode(d2, unicode.mirror) };
+}
+
+function prettySideUnicode(d, mirror) {
+    var s = "";
+    for (var i = 0; i < d.length; i++) {
+        if (d[i][0] == 0) {
+            s += safeTags(fromUnicode(d[i][1], mirror));
+        } else if (d[i][0] == -1) {
+            s += '<span style="background-color: #bdbdbd;">' + safeTags(fromUnicode(d[i][1], mirror)) + '</span>';
+        } else if (d[i][0] == -11) {
+            s += '<span style="border: solid 1px #bdbdbd;"></span>';
+        } else if (d[i][0] == 1) {
+            s += '<span style="background-color: #98fcb7;">' + safeTags(fromUnicode(d[i][1], mirror)) + '</span>';
+        } else if (d[i][0] == 11) {
+            s += '<span style="border: solid 1px #98fcb7;"></span>';
+        } else if (d[i][0] == '!') {
+            s += '<span style="background-color: #b3c4ed;">' + safeTags(fromUnicode(d[i][1], mirror)) + '</span>';
+        }
+    }
+    return s;
+}
+
+function fromUnicode(s, mirror) {
+    var res = '';
+    for (var i = 0; i < s.length; i++) {
+        res += mirror[s.charAt(i)];
+    }
+    return res;
 }
 
 function moveLeftScroller(e) {
@@ -347,7 +488,7 @@ function writeLine(line, number, border, i, id) {
     } else if (line.action == '-') {
         return { html: '<div id="line-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '!') {
-        return { html: '<div id="line-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + line.pretty + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
     }
     return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
 }
@@ -681,7 +822,7 @@ function loadTestDiff() {
 
     <div id="left" style="width: 654px; height: 639px; float: left; border: solid 1px #acacac; overflow: hidden;">
         <div id="left-scroll"
-             style="width: 20px; height: 639px; background-color: #f9f9f9; float: left; border-right: solid 1px #e6e6e6;"></div>
+             style="width: 20px; height: 639px; background-color: #f9f9f9; float: left; border-right: solid 1px #e6e6e6; position: relative;"></div>
         <div id="left-line"
              style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
         <div id="left-middle"
@@ -699,7 +840,7 @@ function loadTestDiff() {
         <div id="right-middle"
              style="width: 30px; height: 639px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
         <div id="right-scroll"
-             style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6;"></div>
+             style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6; position: relative;"></div>
         <div id="right-content" style="overflow: hidden;"></div>
     </div>
 
