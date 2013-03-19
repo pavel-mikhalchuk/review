@@ -69,7 +69,7 @@
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
-<script type="text/javascript" src="js/diff_match_patch_uncompressed.js"></script>
+<script type="text/javascript" src="js/diff_match_patch.js"></script>
 <script type="text/javascript">
 var revMap = {};
 var ctrPressed = false;
