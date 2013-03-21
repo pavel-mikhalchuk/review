@@ -498,6 +498,8 @@ function safeTags(str) {
 }
 
 function scrollLeft(event, delta, deltaX, deltaY) {
+    scrollHorizont(deltaX);
+
     var rowsDelta = 0;
 
     if (deltaY < 0) {
@@ -507,6 +509,12 @@ function scrollLeft(event, delta, deltaX, deltaY) {
     }
 
     scrollLeftByDelta(rowsDelta);
+}
+
+function scrollHorizont(delta) {
+    $.each([$('#left-content'), $('#right-content')], function () {
+        this.scrollLeft(this.scrollLeft() + delta * 100);
+    });
 }
 
 function scrollLeftByDelta(rowsDelta) {
@@ -606,6 +614,8 @@ function setScrolledLeft(row) {
 }
 
 function scrollRight(event, delta, deltaX, deltaY) {
+    scrollHorizont(deltaX);
+
     var rowsDelta = 0;
 
     if (deltaY < 0) {
@@ -826,7 +836,7 @@ function loadTestDiff() {
         <div id="left-line"
              style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
         <div id="left-middle"
-             style="width: 30px; height: 639px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
+             style="width: 30px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
         <div id="left-content" style="overflow: hidden;"></div>
     </div>
 
@@ -838,7 +848,7 @@ function loadTestDiff() {
         <div id="right-line"
              style="background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac; direction: rtl;"></div>
         <div id="right-middle"
-             style="width: 30px; height: 639px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
+             style="width: 30px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
         <div id="right-scroll"
              style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6; position: relative;"></div>
         <div id="right-content" style="overflow: hidden;"></div>
