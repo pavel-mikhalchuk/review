@@ -6,8 +6,6 @@ Review
 
 TODO:
 
-0. horizontal scrolling
-1. line-diff
 2. keywords
 3. set first changed line
 4. smart IDEA-like diff: join creates and modifies, modifies like deletes, modifies like creates ???? - do we really need this???
