@@ -66,6 +66,65 @@
     #left-scroller:hover {
         opacity: 0.7;
     }
+
+    .horizont {
+        width: 654px;
+        height: 12px;
+        background-color: #f9f9f9;
+        border-top: solid 1px #e6e6e6;
+    }
+
+    #lh-scroller {
+        height: 8px;
+        background-color: #c1c1c1;
+        opacity: 0.4;
+        margin-top: 4px;
+        cursor: pointer;
+    }
+
+    #lh-scroller:hover {
+        opacity: 0.7;
+    }
+
+    #rh-scroller {
+        height: 8px;
+        background-color: #c1c1c1;
+        opacity: 0.4;
+        margin-top: 4px;
+        cursor: pointer;
+    }
+
+    #rh-scroller:hover {
+        opacity: 0.7;
+    }
+
+    .lls-margin {
+        float: left;
+        width: 21px;
+        height: 12px;
+        /*border-right: solid 1px #f3f3f3;*/
+    }
+
+    .lrs-margin {
+        float: left;
+        width: 48px;
+        height: 12px;
+        /*border-left: dotted 1px #acacac;*/
+    }
+
+    .rls-margin {
+        float: left;
+        width: 48px;
+        height: 12px;
+        /*border-right: dotted 1px #acacac;*/
+    }
+
+    .rrs-margin {
+        float: left;
+        width: 21px;
+        height: 12px;
+        /*border-left: solid 1px #f3f3f3;*/
+    }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
@@ -140,7 +199,11 @@ var downOver = 6;
 
 var leftLocked = false;
 var rightLocked = false;
+var leftHorizontLocked = false;
+var rightHorizontLocked = false;
 var prevY = 0;
+var leftLockedX = 0;
+var rightLockedX = 0;
 
 var WORDS_REG_EXP = initWordsCuttingPointsRegExp();
 
@@ -153,7 +216,8 @@ function diff(diff) {
     _diff = prettyDiff(diff);
 
     var left = writeSide(diff.left, 'left');
-    $('#left-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + left.lines + '</pre>');
+    $('#left-content').html('<pre id="left-code" style="display: inline-block; margin: 0; position: relative;">' + left.lines + '</pre>');
+    $('#left-code').width($('#left-code').width() + 100);
     $('#left-middle').html('<pre style="margin: 0; color: #a52a2a;">' + left.middle + '</pre>');
     $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
     leftLineCount = left.lineCount;
@@ -165,7 +229,8 @@ function diff(diff) {
     $('#left').mousewheel(scrollLeft);
 
     var right = writeSide(diff.right, 'right');
-    $('#right-content').html('<pre style="font-family: inherit; display: inline-block; margin: 0;">' + right.lines + '</pre>');
+    $('#right-content').html('<pre id="right-code" style="display: inline-block; margin: 0; position: relative;">' + right.lines + '</pre>');
+    $('#right-code').width($('#right-code').width() + 100);
     $('#right-middle').html('<pre style="margin: 0; color: #a52a2a;">' + right.middle + '</pre>');
     $('#right-line').html('<pre style="margin: 0; color: #a52a2a;">' + right.numbers + '</pre>');
     rightLineCount = right.lineCount;
@@ -182,8 +247,12 @@ function diff(diff) {
     writeConnections();
 
     $(document).mouseup(function () {
+        leftLockedX = 0;
+        rightLockedX = 0;
         leftLocked = false;
         rightLocked = false;
+        leftHorizontLocked = false;
+        rightHorizontLocked = false;
     });
 
     $(document).mousemove(function (e) {
@@ -191,6 +260,12 @@ function diff(diff) {
             moveLeftScroller(e);
         } else if (rightLocked) {
             moveRightScroller(e);
+        } else if (leftHorizontLocked) {
+            var ld = moveLeftHorizontScroller(e.pageX);
+            if (ld != 0) moveRightHorizontScroller($('#rh-scroller').offset().left - ld);
+        } else if (rightHorizontLocked) {
+            var rd = moveRightHorizontScroller(e.pageX);
+            if (rd != 0) moveLeftHorizontScroller($('#lh-scroller').offset().left - rd);
         }
     });
 }
@@ -341,6 +416,35 @@ function moveLeftScroller(e) {
     }
 }
 
+function moveLeftHorizontScroller(pageX) {
+    var lc = $('#left-code');
+    var lhs = $('#lh-scroller');
+
+    var prevX = lhs.offset().left;
+    var result = 0;
+
+    var leftX = lhs.parent().offset().left + leftLockedX;
+    var rightX = leftX + 585 - lhs.width();
+
+    if (pageX <= leftX) {
+        lhs.css('left', '0px');
+        lc.css('left', '0px');
+        result = prevX - lhs.offset().left;
+    } else if (pageX >= rightX) {
+        lhs.css('left', 585 - lhs.width() + 'px');
+        lc.css('left', -1 * lhs.position().left * ((lc.width() - 5) / 585) + 'px');
+        result = prevX - lhs.offset().left;
+    } else {
+        lhs.offset({top: lhs.offset().top, left: pageX - leftLockedX});
+        lc.css('left', -1 * lhs.position().left * ((lc.width() - 5) / 585) + 'px');
+        result = prevX - lhs.offset().left;
+    }
+
+    $('#left-out').html(pageX + ':' + lhs.offset().left + ':' + leftX + ':' + leftLockedX + ':' + rightX + ':' + result);
+
+    return result;
+}
+
 function moveRightScroller(e) {
     if (Math.abs(e.pageY - prevY) * (rightLineCount / 640) > 1) {
         var d = (e.pageY - prevY) * (rightLineCount / 640);
@@ -352,6 +456,40 @@ function moveRightScroller(e) {
             prevY = e.pageY;
         }
     }
+}
+
+function moveRightHorizontScroller(pageX) {
+    var rc = $('#right-code');
+    var rhs = $('#rh-scroller');
+
+    var prevX = rhs.offset().left;
+    var result = 0;
+
+    var leftX = rhs.parent().offset().left + rightLockedX;
+    var rightX = leftX + 585 - rhs.width();
+
+    if (pageX <= leftX) {
+        rhs.css('left', '0px');
+        rc.css('left', '0px');
+        result = prevX - rhs.offset().left;
+    } else if (pageX >= rightX) {
+        rhs.css('left', 585 - rhs.width() + 'px');
+        rc.css('left', -1 * rhs.position().left * ((rc.width() - 5) / 585) + 'px');
+        result = prevX - rhs.offset().left;
+    } else {
+        rhs.offset({top: rhs.offset().top, left: pageX - rightLockedX});
+        rc.css('left', -1 * rhs.position().left * ((rc.width() - 5) / 585) + 'px');
+        result = prevX - rhs.offset().left;
+    }
+
+    $('#right-out').html(pageX + ':' + rhs.offset().left + ':' + leftX + ':' + rightLockedX + ':' + rightX + ':' + result);
+
+    return result;
+}
+
+function moveHorizont(deltaX) {
+    moveLeftHorizontScroller($('#lh-scroller').offset().left + deltaX);
+    moveRightHorizontScroller($('#rh-scroller').offset().left + deltaX);
 }
 
 function writeSide(lines, side) {
@@ -430,6 +568,16 @@ function initLeftScroller() {
         }
     }
     $('#left-scroll').append(changes);
+
+    //horizont
+    $('#lh-scroll').html('<div class="lls-margin"></div><div style="width: 585px; float: left; position: relative;"><div id="lh-scroller" style="position: relative;"></div></div><div class="lrs-margin"></div>');
+    $('#lh-scroller').width(585 * 585 / $('#left-code').width());
+
+    $('#lh-scroller').mousedown(function (e) {
+        leftHorizontLocked = true;
+        leftLockedX = e.offsetX;
+        e.preventDefault();
+    });
 }
 
 function moveToLeftRow(row) {
@@ -439,7 +587,7 @@ function moveToLeftRow(row) {
             scrollLeftByDelta(1);
         }
     } else if (delta < 0) {
-        for (var i = 0; i > delta; i--) {
+        for (var j = 0; j > delta; j--) {
             scrollLeftByDelta(-1);
         }
     }
@@ -467,6 +615,16 @@ function initRightScroller() {
         }
     }
     $('#right-scroll').append(changes);
+
+    //horizont
+    $('#rh-scroll').html('<div class="rls-margin"></div><div style="width: 585px; float: left; position: relative;"><div id="rh-scroller" style="position: relative;"></div></div><div class="rrs-margin"></div>');
+    $('#rh-scroller').width(585 * 585 / $('#right-code').width());
+
+    $('#rh-scroller').mousedown(function (e) {
+        rightHorizontLocked = true;
+        rightLockedX = e.offsetX;
+        e.preventDefault();
+    });
 }
 
 function moveToRightRow(row) {
@@ -476,7 +634,7 @@ function moveToRightRow(row) {
             scrollRightByDelta(1);
         }
     } else if (delta < 0) {
-        for (var i = 0; i > delta; i--) {
+        for (var j = 0; j > delta; j--) {
             scrollRightByDelta(-1);
         }
     }
@@ -498,7 +656,7 @@ function safeTags(str) {
 }
 
 function scrollLeft(event, delta, deltaX, deltaY) {
-    scrollHorizont(deltaX);
+    moveHorizont(deltaX * 20);
 
     var rowsDelta = 0;
 
@@ -509,12 +667,6 @@ function scrollLeft(event, delta, deltaX, deltaY) {
     }
 
     scrollLeftByDelta(rowsDelta);
-}
-
-function scrollHorizont(delta) {
-    $.each([$('#left-content'), $('#right-content')], function () {
-        this.scrollLeft(this.scrollLeft() + delta * 100);
-    });
 }
 
 function scrollLeftByDelta(rowsDelta) {
@@ -579,7 +731,7 @@ function scrollLeftByDelta(rowsDelta) {
 
     }
 
-    $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount);
+//    $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount);
 
     event.preventDefault();
 
@@ -614,7 +766,7 @@ function setScrolledLeft(row) {
 }
 
 function scrollRight(event, delta, deltaX, deltaY) {
-    scrollHorizont(deltaX);
+    moveHorizont(deltaX * 20);
 
     var rowsDelta = 0;
 
@@ -686,7 +838,7 @@ function scrollRightByDelta(rowsDelta) {
         setRightRow(rowsDelta);
     }
 
-    $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount);
+//    $('#right-out').html('~~~~~' + ':' + rightFirst + ':' + rightLast + ':' + rightLineCount);
 
     event.preventDefault();
 
@@ -725,7 +877,7 @@ function writeConnections() {
     var ctx = example.getContext('2d');
 
     ctx.fillStyle = "#f0f0f0";
-    ctx.fillRect(0, 0, 30, 640);
+    ctx.fillRect(0, 0, 30, 639);
 
     var lines = _diff.left;
 
@@ -765,6 +917,16 @@ function writeConnections() {
             }
         }
     }
+
+    ctx.fillStyle = "#f9f9f9";
+    ctx.fillRect(0, 640, 30, 52);
+
+    ctx.strokeStyle = "#e6e6e6";
+    ctx.beginPath();
+    ctx.moveTo(0.5, 639.5);
+    ctx.lineTo(29.5, 639.5);
+    ctx.stroke();
+    ctx.closePath();
 }
 
 function fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4) {
@@ -830,28 +992,34 @@ function loadTestDiff() {
 
 <div id="diff">
 
-    <div id="left" style="width: 654px; height: 639px; float: left; border: solid 1px #acacac; overflow: hidden;">
-        <div id="left-scroll"
-             style="width: 20px; height: 639px; background-color: #f9f9f9; float: left; border-right: solid 1px #e6e6e6; position: relative;"></div>
-        <div id="left-line"
-             style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
-        <div id="left-middle"
-             style="width: 30px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
-        <div id="left-content" style="overflow: hidden;"></div>
+    <div style="border: solid 1px #acacac; float: left;">
+        <div id="left" style="width: 654px; height: 639px; overflow: hidden;">
+            <div id="left-scroll"
+                 style="width: 20px; height: 639px; background-color: #f9f9f9; float: left; border-right: solid 1px #e6e6e6; position: relative;"></div>
+            <div id="left-line"
+                 style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
+            <div id="left-middle"
+                 style="width: 30px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
+            <div id="left-content" style="overflow: hidden; position: relative;"></div>
+        </div>
+        <div id="lh-scroll" class="horizont"></div>
     </div>
 
-    <canvas id="middle" width="30" height="639"
+    <canvas id="middle" width="30" height="652"
             style="float: left; border-top: solid 1px #acacac; border-bottom: solid 1px #acacac;"></canvas>
 
-    <div id="right"
-         style="width: 654px; height: 639px; float: left; border: solid 1px #acacac; overflow: hidden;">
-        <div id="right-line"
-             style="background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac; direction: rtl;"></div>
-        <div id="right-middle"
-             style="width: 30px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
-        <div id="right-scroll"
-             style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6; position: relative;"></div>
-        <div id="right-content" style="overflow: hidden;"></div>
+    <div style="border: solid 1px #acacac; float: left;">
+        <div id="right"
+             style="width: 654px; height: 639px; overflow: hidden;">
+            <div id="right-line"
+                 style="background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac; direction: rtl;"></div>
+            <div id="right-middle"
+                 style="width: 30px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
+            <div id="right-scroll"
+                 style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6; position: relative;"></div>
+            <div id="right-content" style="overflow: hidden;"></div>
+        </div>
+        <div id="rh-scroll" class="horizont"></div>
     </div>
 
 </div>
