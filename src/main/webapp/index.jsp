@@ -658,15 +658,9 @@ function safeTags(str) {
 function scrollLeft(event, delta, deltaX, deltaY) {
     moveHorizont(deltaX * 20);
 
-    var rowsDelta = 0;
-
-    if (deltaY < 0) {
-        rowsDelta += 1;
-    } else if (deltaY > 0) {
-        rowsDelta += -1;
+    for (var i = 0; i <= Math.floor(Math.abs(deltaY)); i++) {
+        scrollLeftByDelta(deltaY > 0 ? -1 : 1);
     }
-
-    scrollLeftByDelta(rowsDelta);
 }
 
 function scrollLeftByDelta(rowsDelta) {
@@ -768,15 +762,9 @@ function setScrolledLeft(row) {
 function scrollRight(event, delta, deltaX, deltaY) {
     moveHorizont(deltaX * 20);
 
-    var rowsDelta = 0;
-
-    if (deltaY < 0) {
-        rowsDelta += 1;
-    } else if (deltaY > 0) {
-        rowsDelta += -1;
+    for (var i = 0; i <= Math.floor(Math.abs(deltaY)); i++) {
+        scrollRightByDelta(deltaY > 0 ? -1 : 1);
     }
-
-    scrollRightByDelta(rowsDelta)
 }
 
 function scrollRightByDelta(rowsDelta) {
