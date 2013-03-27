@@ -1,0 +1,8 @@
+<project name="Review" basedir="." default="jsp">
+
+    <target name="jsp" description="jsp">
+        <copy file="src/main/webapp/index.jsp"
+              todir="/Users/pacan/Development/projects/PM/Review/target/review-1.0-SNAPSHOT/" overwrite="true"/>
+    </target>
+
+</project>

@@ -125,6 +125,14 @@
         height: 12px;
         /*border-left: solid 1px #f3f3f3;*/
     }
+
+    .keyword {
+        color: #0000a0;
+    }
+
+    .annotation {
+        color: #31c331;
+    }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
@@ -209,14 +217,14 @@ var WORDS_REG_EXP = initWordsCuttingPointsRegExp();
 
 function initWordsCuttingPointsRegExp() {
     var points = [' ', '\\(', '\\)', '\\.', ':', ';', ',', '\\{', '\\}', '\\<', '\\>', '\\/', '\\|', '\\\\', '\\+', '\\-', '\\*'];
-    return new RegExp('(' + points.join("|") + ')', 'g')
+    return new RegExp('(' + points.join("|") + ')', 'g');
 }
 
 function diff(diff) {
     _diff = prettyDiff(diff);
 
     var left = writeSide(diff.left, 'left');
-    $('#left-content').html('<pre id="left-code" style="display: inline-block; margin: 0; position: relative;">' + left.lines + '</pre>');
+    $('#left-content').html('<pre id="left-code" style="display: inline-block; margin: 0; position: relative; font-family: Menlo; font-size: 12px;">' + left.lines + '</pre>');
     $('#left-code').width($('#left-code').width() + 100);
     $('#left-middle').html('<pre style="margin: 0; color: #a52a2a;">' + left.middle + '</pre>');
     $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
@@ -229,7 +237,7 @@ function diff(diff) {
     $('#left').mousewheel(scrollLeft);
 
     var right = writeSide(diff.right, 'right');
-    $('#right-content').html('<pre id="right-code" style="display: inline-block; margin: 0; position: relative;">' + right.lines + '</pre>');
+    $('#right-content').html('<pre id="right-code" style="display: inline-block; margin: 0; position: relative; font-family: Menlo; font-size: 12px;">' + right.lines + '</pre>');
     $('#right-code').width($('#right-code').width() + 100);
     $('#right-middle').html('<pre style="margin: 0; color: #a52a2a;">' + right.middle + '</pre>');
     $('#right-line').html('<pre style="margin: 0; color: #a52a2a;">' + right.numbers + '</pre>');
@@ -449,7 +457,7 @@ function moveRightScroller(e) {
     if (Math.abs(e.pageY - prevY) * (rightLineCount / 640) > 1) {
         var d = (e.pageY - prevY) * (rightLineCount / 640);
         var rowsDelta = e.pageY - prevY > 0 ? Math.floor(d) : Math.ceil(d);
-        $('#right-out').html('ssss~~~ ' + d + ' - ' + rowsDelta);
+//        $('#right-out').html('ssss~~~ ' + d + ' - ' + rowsDelta);
         if (rowsDelta == 0 || rightFirst + rowsDelta <= 0 || rightLast + rowsDelta > rightLineCount + downOver) rowsDelta = 0;
         if (rowsDelta != 0) {
             scrollRightByDelta(rowsDelta);
@@ -482,7 +490,7 @@ function moveRightHorizontScroller(pageX) {
         result = prevX - rhs.offset().left;
     }
 
-    $('#right-out').html(pageX + ':' + rhs.offset().left + ':' + leftX + ':' + rightLockedX + ':' + rightX + ':' + result);
+//    $('#right-out').html(pageX + ':' + rhs.offset().left + ':' + leftX + ':' + rightLockedX + ':' + rightX + ':' + result);
 
     return result;
 }
@@ -641,14 +649,38 @@ function moveToRightRow(row) {
 }
 
 function writeLine(line, number, border, i, id) {
+    doJava(line);
     if (line.action == '+') {
-        return { html: '<div id="line-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '-') {
-        return { html: '<div id="line-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '!') {
         return { html: '<div id="line-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + line.pretty + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
     }
-    return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + safeTags(line.line) + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
+    return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
+}
+
+var keywords = ['package ', 'import ', 'implements ', 'private ', 'public ', 'protected ', 'final ', 'static ', 'void ', 'for ', 'abstract ', 'class ', 'try ', 'catch ', 'if ', 'new ', 'throw ', 'null'];
+
+function doJava(line) {
+    var l = safeTags(line.line);
+    var p = line.pretty;
+    for (var i = 0; i < keywords.length; i++) {
+        var regExp = new RegExp(keywords[i], 'g');
+
+        l = l.replace(regExp, '<b><span class="keyword">' + keywords[i] + '</span></b>');
+        if (typeof line.pretty != 'undefined') {
+            p = p.replace(regExp, '<b><span class="keyword">' + keywords[i] + '</span></b>');
+        }
+    }
+
+    l = l.replace('@Override', '<span class="annotation">' + '@Override' + '</span>');
+    if (typeof line.pretty != 'undefined') {
+        p = p.replace('@Override', '<span class="annotation">' + '@Override' + '</span>');
+    }
+
+    line.line = l;
+    line.pretty = p;
 }
 
 function safeTags(str) {
@@ -658,9 +690,11 @@ function safeTags(str) {
 function scrollLeft(event, delta, deltaX, deltaY) {
     moveHorizont(deltaX * 20);
 
-    for (var i = 0; i <= Math.floor(Math.abs(deltaY)); i++) {
+    for (var i = 0; deltaY != 0 && i <= Math.floor(Math.abs(deltaY * 3)); i++) {
         scrollLeftByDelta(deltaY > 0 ? -1 : 1);
     }
+
+    event.preventDefault();
 }
 
 function scrollLeftByDelta(rowsDelta) {
@@ -727,8 +761,6 @@ function scrollLeftByDelta(rowsDelta) {
 
 //    $('#left-out').html('~~~~~' + ':' + leftFirst + ':' + leftLast + ':' + leftLineCount);
 
-    event.preventDefault();
-
     writeConnections();
 }
 
@@ -762,9 +794,11 @@ function setScrolledLeft(row) {
 function scrollRight(event, delta, deltaX, deltaY) {
     moveHorizont(deltaX * 20);
 
-    for (var i = 0; i <= Math.floor(Math.abs(deltaY)); i++) {
+    for (var i = 0; deltaY != 0 && i <= Math.floor(Math.abs(deltaY * 3)); i++) {
         scrollRightByDelta(deltaY > 0 ? -1 : 1);
     }
+
+    event.preventDefault();
 }
 
 function scrollRightByDelta(rowsDelta) {
@@ -1019,6 +1053,12 @@ function loadTestDiff() {
 
 <input type="button" onclick="loadLog();"/>
 <input type="button" onclick="loadTestDiff();"/>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        loadTestDiff();
+    });
+</script>
 
 </body>
 </html>
