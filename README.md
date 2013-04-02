@@ -19,3 +19,6 @@ TODO:
 13. think about scrollers dragging approach
 14. fix JSON
 15. not in VPN exception
+16. highlight non-java syntax
+17. vertical drag improvement
+18. vertical scroll delta optimization

@@ -127,11 +127,20 @@
     }
 
     .keyword {
-        color: #0000a0;
+        color: #130098;
+    }
+
+    .comment {
+        color: #929292;
+        font-style: italic;
     }
 
     .annotation {
         color: #31c331;
+    }
+
+    .literal {
+        color: #059903;
     }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
@@ -166,7 +175,11 @@ function showRevision(revision) {
     });
 }
 
+var file;
+
 function showDiff(action, file, rev) {
+    this.file = file.substr(file.indexOf('.') + 1, file.length);
+
     if ($('.active').length > 0) {
         if (action == 'A') {
             $.get('review/cat?file=' + encodeURIComponent(file) + '&rev=' + rev, function (data) {
@@ -517,7 +530,7 @@ function writeSide(lines, side) {
     var numbersHtml = wl.number;
     lineCount++;
 
-    for (var i = 1; i < lines.length - 1; i++) {
+    for (var i = 1; i < lines.length; i++) {
         line = lines[i];
         lineByRealLine[lineCount] = {'number': i + 1, 'scrolled': false};
         realLineByLine[i + 1] = {'number': lineCount, 'scrolled': false};
@@ -649,7 +662,12 @@ function moveToRightRow(row) {
 }
 
 function writeLine(line, number, border, i, id) {
-    doJava(line);
+    line.line = safeTags(line.line);
+
+    if (file == 'java') {
+        doJava(line);
+    }
+
     if (line.action == '+') {
         return { html: '<div id="line-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '-') {
@@ -660,27 +678,88 @@ function writeLine(line, number, border, i, id) {
     return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
 }
 
-var keywords = ['package ', 'import ', 'implements ', 'private ', 'public ', 'protected ', 'final ', 'static ', 'void ', 'for ', 'abstract ', 'class ', 'try ', 'catch ', 'if ', 'new ', 'throw ', 'null'];
-
 function doJava(line) {
-    var l = safeTags(line.line);
-    var p = line.pretty;
-    for (var i = 0; i < keywords.length; i++) {
-        var regExp = new RegExp(keywords[i], 'g');
+    line.marks = {};
 
-        l = l.replace(regExp, '<b><span class="keyword">' + keywords[i] + '</span></b>');
-        if (typeof line.pretty != 'undefined') {
-            p = p.replace(regExp, '<b><span class="keyword">' + keywords[i] + '</span></b>');
+    doNonComments(line);
+    doComments(line);
+}
+
+function doComments(line) {
+    var r = new RegExp('(/\\*+([^*]|(\\*[^/]))*\\*+/)|(/\\*+([^*]|(\\*[^/]))*)|(//.*)|(^ *\\*.*)', 'g');
+
+    var a = uniqueArray(line.line.match(r));
+
+    if (a != null) {
+        for (var i = 0; i < a.length; i++) {
+            mark(line, a[i], 'comment');
         }
     }
+}
 
-    l = l.replace('@Override', '<span class="annotation">' + '@Override' + '</span>');
-    if (typeof line.pretty != 'undefined') {
-        p = p.replace('@Override', '<span class="annotation">' + '@Override' + '</span>');
+function mark(line, chars, color) {
+    var i = 0;
+    while (i = line.line.indexOf(chars, i) != -1) {
+        for (var j = 0; j < chars.length; j++) {
+            if (typeof line.marks[i + j] == 'undefined') line.marks[i + j] = {};
+            line.marks[i + j][color] = true;
+        }
     }
+}
 
-    line.line = l;
-    line.pretty = p;
+function doNonComments(line) {
+    var r = new RegExp('(\\*/.+/\\*)|(\\*/.+//)|(\\*/.+$)|(^([^/]|/[^*/])+/\\*)|(^[^*]*)|(^([^/]|/[^*/])+)', 'g');
+
+    var a = uniqueArray(line.line.match(r));
+
+    if (a != null) {
+        for (var i = 0; i < a.length; i++) {
+            var l = {line: a[i]};
+
+            doStringLiterals(l);
+            doKeywords(l);
+            doAnnotations(l);
+
+            line.line = line.line.replace(a[i], l.line);
+        }
+    }
+}
+
+function doStringLiterals(line) {
+    line.line = line.line.replace(/"[^"]*"/g, '<b><span class="literal">$&</span></b>');
+}
+
+var keywords = ['package ', 'import ', 'implements ', 'private ', 'public ', 'protected ', 'final ', 'static ', 'void ', 'for ', 'for(', 'while ', 'while(', 'abstract ', 'class ', 'try ', 'try{', 'catch ', 'catch{', 'if ', 'if(', 'else ', 'else{', 'new ', 'throw ', 'null'];
+
+function doKeywords(line) {
+    for (var i = 0; i < keywords.length; i++) {
+        replaceCode(line, keywords[i], 'keyword', true);
+    }
+}
+
+function doAnnotations(line) {
+    line.line = line.line.replace(/@[A-Za-z]+/g, '<span class="annotation">$&</span>');
+}
+
+function replaceCode(line, code, clazz, bold) {
+    var v = '<span class="' + clazz + '">' + code + '</span>';
+    if (bold == true) {
+        v = '<b>' + v + '</b>';
+    }
+    line.line = line.line.replace(toRegExp(code), v);  //???????
+}
+
+function uniqueArray(array) {
+    if (array == null) return array;
+    var u = [];
+    $.each(array, function (i, el) {
+        if ($.inArray(el, u) === -1) u.push(el);
+    });
+    return u;
+}
+
+function toRegExp(s) {
+    return new RegExp(s.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\\\$&"), 'g');
 }
 
 function safeTags(str) {
@@ -994,6 +1073,7 @@ $(document).keyup(function (event) {
 });
 
 function loadTestDiff() {
+    file = 'java';
     $.get('review/diff?file=' + encodeURIComponent('/app-framework/trunk/app-core/src/main/java/com/shc/obu/app/framework/flow/ItemSearchIncrementalIndexFlow.java') + '&rev=' + '124714', function (data) {
         diff(data);
     })
@@ -1057,6 +1137,42 @@ function loadTestDiff() {
 <script type="text/javascript">
     $(document).ready(function () {
         loadTestDiff();
+
+        //basic
+
+        var line;
+
+        $('#left-out').html('');
+
+        doJava(line = {line: '/**'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: ' * @author Pavel Mikhalchuk'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: '*/'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: '/*sdf*/public Comparison(List<Line> base, Diff diff) {'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: 'while (b.hasNext()) {'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: 'while (b.hasNext()) { //dfgdfg'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: '/*sdf*/if (diff.existFor(l)) {//sdfsdf'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: '/*sdf*/if (diff.existFor(l)) {/*sdf*/'});
+        $('#left-out').append(line.line + '</br>');
+
+        doJava(line = {line: ' * sdf if (diff.existFor(l)) {'});
+        $('#left-out').append(line.line + '</br>');
+
+        //pretties
+//        $('left-out').append(doJava({line:'', pretty:''}));
     });
 </script>
 
