@@ -267,7 +267,7 @@ var rightLockedX = 0;
 var WORDS_REG_EXP = initWordsCuttingPointsRegExp();
 
 function initWordsCuttingPointsRegExp() {
-    var points = [' ', '\\(', '\\)', '\\.', ':', ';', ',', '\\{', '\\}', '\\<', '\\>', '\\/', '\\|', '\\\\', '\\+', '\\-', '\\*'];
+    var points = [' ', '\\(', '\\)', '\\.', ':', ';', ',', '\\{', '\\}', '&lt;', '&gt;', '\\/', '\\|', '\\\\', '\\+', '\\-', '\\*'];
     return new RegExp('(' + points.join("|") + ')', 'g');
 }
 

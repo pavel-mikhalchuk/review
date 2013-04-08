@@ -24,5 +24,4 @@ TODO:
 19. skins
 
 c. disappeared borders
-e. <version>1.1.740<;/version>
 f. colors
