@@ -5,6 +5,15 @@
 <head>
 <title>Review</title>
 <style>
+    .pre {
+        position: relative;
+        display: inline-block;
+        margin: 0;
+        font-family: Menlo;
+        font-size: 12px;
+        tab-size: 4;
+    }
+
     .active {
         background-color: yellow;
     }
@@ -146,8 +155,12 @@
         background-color: #b3c4ed;
     }
 
+    .text {
+    }
+
     .keyword {
         color: #130098;
+        font-weight: bold;
     }
 
     .comment {
@@ -161,6 +174,11 @@
 
     .literal {
         color: #059903;
+        font-weight: bold;
+    }
+
+    .digits {
+        color: #2a2eff;
     }
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
@@ -257,7 +275,7 @@ function diff(diff) {
     _diff = prettyDiff(diff);
 
     var left = writeSide(diff.left, 'left');
-    $('#left-content').html('<pre id="left-code" style="display: inline-block; margin: 0; position: relative; font-family: Menlo; font-size: 12px;">' + left.lines + '</pre>');
+    $('#left-content').html('<pre id="left-code" class="pre">' + left.lines + '</pre>');
     $('#left-code').width($('#left-code').width() + 100);
     $('#left-middle').html('<pre style="margin: 0; color: #a52a2a;">' + left.middle + '</pre>');
     $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
@@ -270,7 +288,7 @@ function diff(diff) {
     $('#left').mousewheel(scrollLeft);
 
     var right = writeSide(diff.right, 'right');
-    $('#right-content').html('<pre id="right-code" style="display: inline-block; margin: 0; position: relative; font-family: Menlo; font-size: 12px;">' + right.lines + '</pre>');
+    $('#right-content').html('<pre id="right-code" class="pre">' + right.lines + '</pre>');
     $('#right-code').width($('#right-code').width() + 100);
     $('#right-middle').html('<pre style="margin: 0; color: #a52a2a;">' + right.middle + '</pre>');
     $('#right-line').html('<pre style="margin: 0; color: #a52a2a;">' + right.numbers + '</pre>');
@@ -340,35 +358,62 @@ function prettySyntax(line) {
 
 function spanUp(line) {
     var p = '';
+    var clazz = '';
+    var changeClazz = '';
+    var newClazz = '';
+    var newChangeClazz = '';
+    var s = '';
+    var c = '';
+
     for (var i = 0; i < line.line.length; i++) {
         if (typeof line.marks[i] != 'undefined') {
             if (line.marks[i]['comment'] == true) {
-                p += '<span class="comment';
+                newClazz = 'comment';
             } else if (line.marks[i]['literal'] == true) {
-                p += '<span class="literal';
+                newClazz = 'literal';
             } else if (line.marks[i]['keyword'] == true) {
-                p += '<span class="keyword';
+                newClazz = 'keyword';
             } else if (line.marks[i]['annotation'] == true) {
-                p += '<span class="annotation';
+                newClazz = 'annotation';
+            } else if (line.marks[i]['digits'] == true) {
+                newClazz = 'digits';
+            } else {
+                newClazz = 'unknown';
             }
 
             if (line.marks[i]['pd-deleted'] == true) {
-                p += ' pd-deleted';
+                newChangeClazz = ' pd-deleted';
             } else if (line.marks[i]['pd-pseudo-deleted'] == true) {
-                p += ' pd-pseudo-deleted';
+                newChangeClazz = ' pd-pseudo-deleted';
             } else if (line.marks[i]['pd-added'] == true) {
-                p += ' pd-added';
+                newChangeClazz = ' pd-added';
             } else if (line.marks[i]['pd-pseudo-added'] == true) {
-                p += ' pd-pseudo-added';
+                newChangeClazz = ' pd-pseudo-added';
             } else if (line.marks[i]['pd-changed'] == true) {
-                p += ' pd-changed';
+                newChangeClazz = ' pd-changed';
+            } else {
+                newChangeClazz = '';
             }
-
-            p += '">' + line.line.charAt(i) + '</span>';
         } else {
-            p += line.line.charAt(i);
+            newClazz = newChangeClazz = 'text';
         }
+
+        if (clazz != newClazz || changeClazz != newChangeClazz) {
+            if (s != '') {
+                p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
+                s = '';
+            }
+            clazz = newClazz;
+            changeClazz = newChangeClazz;
+        }
+
+        s += line.line.charAt(i);
     }
+
+    if (s != '') {
+        p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
+    }
+
     line.pretty = p;
 }
 
@@ -500,6 +545,7 @@ function fromUnicode(s, mirror) {
 function doJava(line) {
     doComments(line);
     doStringLiterals(line);
+    doDigits(line);
     doKeywords(line);
     doAnnotations(line);
 }
@@ -512,7 +558,14 @@ function doStringLiterals(line) {
     doJavaLine(line, '"[^"]*"', 'literal')
 }
 
-var keywords = ['package ', 'import ', 'implements ', 'private ', 'public ', 'protected ', 'final ', 'static ', 'void ', 'for ', 'for(', 'while ', 'while(', 'abstract ', 'class ', 'try ', 'try{', 'catch ', 'catch{', 'if ', 'if(', 'else ', 'else{', 'new ', 'throw ', 'null'];
+function doDigits(line) {
+    doJavaLine(line, '\\b[\\d]+[lLdD]{0,1}\\b', 'digits')
+}
+
+var keywords = ['\\bpackage\\b', '\\bimport\\b', '\\bimplements\\b', '\\bprivate\\b', '\\bpublic\\b', '\\bprotected\\b',
+    '\\bfinal\\b', '\\bstatic\\b', '\\bvoid\\b', '\\bsynchronized\\b', '\\bfor\\b', '\\bwhile\\b', '\\babstract\\b', '\\btry\\b', '\\bcatch\\b',
+    '\\bif\\b', '\\belse\\b', '\\bnew\\b', '\\bthrow[s]{0,1}\\b', '\\bextends\\b', '\\breturn\\b', '\\bnull\\b', '\\bint\\b',
+    '\\blong\\b', '\\bdouble\\b', '\\bchar\\b', '\\bboolean\\b', '\\btrue\\b', '\\bfalse\\b', '\\bclass\\b'];
 
 function doKeywords(line) {
     for (var i = 0; i < keywords.length; i++) {
@@ -526,33 +579,18 @@ function doAnnotations(line) {
 
 function doJavaLine(line, regExp, color) {
     var r = new RegExp(regExp, 'g');
+    var match;
 
-    var a = uniqueArray(line.line.match(r));
-
-    if (a != null) {
-        for (var i = 0; i < a.length; i++) {
-            mark(line, a[i], color);
-        }
+    while ((match = r.exec(line.line)) != null) {
+        mark(line, match, color);
     }
 }
 
-function mark(line, chars, color) {
-    var i = 0;
-    while (i = line.line.indexOf(chars, i) != -1) {
-        for (var j = 0; j < chars.length; j++) {
-            if (typeof line.marks[i + j] == 'undefined') line.marks[i + j] = {};
-            line.marks[i + j][color] = true;
-        }
+function mark(line, match, color) {
+    for (var j = match.index; j < match.index + match[0].length; j++) {
+        if (typeof line.marks[j] == 'undefined') line.marks[j] = {};
+        line.marks[j][color] = true;
     }
-}
-
-function uniqueArray(array) {
-    if (array == null) return array;
-    var u = [];
-    $.each(array, function (i, el) {
-        if ($.inArray(el, u) === -1) u.push(el);
-    });
-    return u;
 }
 
 function safeTags(str) {
@@ -798,13 +836,13 @@ function moveToRightRow(row) {
 
 function writeLine(line, number, border, i, id) {
     if (line.action == '+') {
-        return { html: '<div id="line-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + line.pretty + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row added' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '-') {
-        return { html: '<div id="line-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
+        return { html: '<div id="line-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + line.pretty + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row deleted' + (border == true ? ' last">' : '">') + number + '</div>' };
     } else if (line.action == '!') {
         return { html: '<div id="line-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + line.pretty + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row modified' + (border == true ? ' last">' : '">') + number + '</div>' };
     }
-    return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + line.line + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
+    return { html: '<div id="line-' + id + '-' + number + '" class="row' + (border == true ? ' last">' : '">') + line.pretty + '</div>', middle: '<div id="middle-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + '</div>', number: '<div id="num-' + id + '-' + number + '" class="row number' + (border == true ? ' last">' : '">') + number + '</div>' };
 }
 
 function scrollLeft(event, delta, deltaX, deltaY) {
@@ -1115,9 +1153,168 @@ $(document).keyup(function (event) {
 
 function loadTestDiff() {
     file = 'java';
-    $.get('review/diff?file=' + encodeURIComponent('/app-framework/trunk/app-core/src/main/java/com/shc/obu/app/framework/flow/ItemSearchIncrementalIndexFlow.java') + '&rev=' + '124714', function (data) {
-        diff(data);
-    })
+//    $.get('review/diff?file=' + encodeURIComponent('/app-framework/trunk/app-core/src/main/java/com/shc/obu/app/framework/flow/ItemSearchIncrementalIndexFlow.java') + '&rev=' + '124714', function (data) {
+//        diff(data);
+//    })
+    var s = new Date();
+    diff({"left": [
+        {"number": 1, "line": "package com.shc.obu.app.framework.flow;"},
+        {"number": 2, "line": ""},
+        {"number": 3, "action": "+", "line": ""},
+        {"number": 4, "line": "import com.google.common.collect.Multimap;"},
+        {"number": 5, "line": "import com.shc.obu.app.framework.accessors.SearchAccessor;"},
+        {"number": 6, "line": "import com.shc.obu.app.framework.enums.Applications;"},
+        {"number": 7, "line": "import com.shc.obu.app.framework.fetchers.FetchParamsKeys;"},
+        {"number": 8, "line": "import com.shc.obu.app.framework.jdbc.shard.ShardLocator;"},
+        {"number": 9, "line": "import com.shc.obu.app.framework.parameters.Parameters;"},
+        {"number": 10, "line": "import com.shc.obu.ca.common.lang.Pair;"},
+        {"number": 11, "line": "import com.shc.obu.ca.common.lang.XRuntime;"},
+        {"number": 12, "line": "import org.slf4j.Logger;"},
+        {"number": 13, "line": "import org.slf4j.LoggerFactory;"},
+        {"number": 14, "line": ""},
+        {"number": 15, "action": "+", "line": ""},
+        {"number": 16, "line": "import java.util.Date;"},
+        {"number": 17, "line": ""},
+        {"number": 18, "line": "/**"},
+        {"number": 19, "line": " * Created by IntelliJ IDEA."},
+        {"number": 20, "line": " * User: dviarzh"},
+        {"number": 21, "line": " * Date: 7/21/12"},
+        {"number": 22, "line": " * Time: 12:33 AM"},
+        {"number": 23, "line": " * To change this template use File | Settings | File Templates."},
+        {"number": 24, "line": " */"},
+        {"number": 25, "line": "public abstract class ItemSearchIncrementalIndexFlow implements Flow<Parameters> {"},
+        {"number": 26, "line": ""},
+        {"number": 27, "line": "    protected final static Logger logger = LoggerFactory.getLogger(ItemSearchIncrementalIndexFlow.class);"},
+        {"number": 28, "line": ""},
+        {"number": 29, "line": "    private Date startDate;"},
+        {"number": 30, "line": "    private Date endDate;"},
+        {"number": 31, "action": "+", "line": ""},
+        {"number": 32, "line": ""},
+        {"number": 33, "line": "    @Override"},
+        {"number": 34, "line": "    public void preProcess(Parameters parameters) {"},
+        {"number": 35, "line": "        startDate = parameters.get(FetchParamsKeys.startDate);"},
+        {"number": 36, "line": "        endDate = parameters.get(FetchParamsKeys.endDate);"},
+        {"number": 37, "action": "+", "line": ""},
+        {"number": 38, "line": "    }"},
+        {"number": 39, "line": ""},
+        {"number": 40, "line": "    @Override"},
+        {"number": 41, "line": "    public void process() {"},
+        {"number": 42, "line": ""},
+        {"number": 43, "line": "        logger.debug(\"Process: Starting search incremental update processing.\");"},
+        {"number": 44, "action": "!", "line": ""},
+        {"number": 45, "action": "+", "line": ""},
+        {"number": 46, "action": "+", "line": ""},
+        {"number": 47, "action": "+", "line": ""},
+        {"number": 48, "action": "+", "line": ""},
+        {"number": 49, "action": "+", "line": ""},
+        {"number": 50, "action": "+", "line": ""},
+        {"number": 51, "line": "        //Process updates"},
+        {"number": 52, "action": "!", "line": "        for (Integer shardIndex : ShardLocator.allCatalogIndices()) {"},
+        {"number": 53, "line": "            try {"},
+        {"number": 54, "line": "                Pair<Date, Multimap<Long, Long>> dateItemPair = SearchAccessor.getItemModifiedIdListSolr(shardIndex, application(), startDate, endDate);"},
+        {"number": 55, "line": "                if (dateItemPair != null) {"},
+        {"number": 56, "line": "                    Date completionDate = dateItemPair.getK();"},
+        {"number": 57, "line": "                    Multimap<Long, Long> itemsByAccount = dateItemPair.getV();"},
+        {"number": 58, "line": "                    if (itemsByAccount != null) {"},
+        {"number": 59, "line": "                        itemsByAccount.removeAll(null);"},
+        {"number": 60, "line": "                        if (!itemsByAccount.isEmpty()) {"},
+        {"number": 61, "line": "                            doIncrementalIndex(shardIndex,itemsByAccount);"},
+        {"number": 62, "line": "                            SearchAccessor.completeSearchIncrementalJob(completionDate, shardIndex, application());"},
+        {"number": 63, "line": "                        }"},
+        {"number": 64, "line": "                    }"},
+        {"number": 65, "line": "                }"},
+        {"number": 66, "line": "            } catch (Exception e) {"},
+        {"number": 67, "line": "                throw new XRuntime(\"Failed to index items from shardIndex: \" + shardIndex, e);"},
+        {"number": 68, "line": "            }"},
+        {"number": 69, "line": ""},
+        {"number": 70, "line": "        }"},
+        {"number": 71, "line": "    }"},
+        {"number": 72, "line": ""},
+        {"number": 73, "line": "    protected abstract void doIncrementalIndex(Integer dbShardIndex, Multimap<Long, Long> itemsByAccount);"},
+        {"number": 74, "line": ""},
+        {"number": 75, "line": "    protected abstract Applications application();"},
+        {"number": 76, "line": "}"}
+    ], "right": [
+        {"number": 1, "line": "package com.shc.obu.app.framework.flow;"},
+        {"number": 2, "line": ""},
+        {"number": 3, "action": "+", "line": "import com.google.common.collect.Lists;"},
+        {"number": 4, "line": "import com.google.common.collect.Multimap;"},
+        {"number": 5, "line": "import com.shc.obu.app.framework.accessors.SearchAccessor;"},
+        {"number": 6, "line": "import com.shc.obu.app.framework.enums.Applications;"},
+        {"number": 7, "line": "import com.shc.obu.app.framework.fetchers.FetchParamsKeys;"},
+        {"number": 8, "line": "import com.shc.obu.app.framework.jdbc.shard.ShardLocator;"},
+        {"number": 9, "line": "import com.shc.obu.app.framework.parameters.Parameters;"},
+        {"number": 10, "line": "import com.shc.obu.ca.common.lang.Pair;"},
+        {"number": 11, "line": "import com.shc.obu.ca.common.lang.XRuntime;"},
+        {"number": 12, "line": "import org.slf4j.Logger;"},
+        {"number": 13, "line": "import org.slf4j.LoggerFactory;"},
+        {"number": 14, "line": ""},
+        {"number": 15, "action": "+", "line": "import java.util.Collection;"},
+        {"number": 16, "line": "import java.util.Date;"},
+        {"number": 17, "line": ""},
+        {"number": 18, "line": "/**"},
+        {"number": 19, "line": " * Created by IntelliJ IDEA."},
+        {"number": 20, "line": " * User: dviarzh"},
+        {"number": 21, "line": " * Date: 7/21/12"},
+        {"number": 22, "line": " * Time: 12:33 AM"},
+        {"number": 23, "line": " * To change this template use File | Settings | File Templates."},
+        {"number": 24, "line": " */"},
+        {"number": 25, "line": "public abstract class ItemSearchIncrementalIndexFlow implements Flow<Parameters> {"},
+        {"number": 26, "line": ""},
+        {"number": 27, "line": "    protected final static Logger logger = LoggerFactory.getLogger(ItemSearchIncrementalIndexFlow.class);"},
+        {"number": 28, "line": ""},
+        {"number": 29, "line": "    private Date startDate;"},
+        {"number": 30, "line": "    private Date endDate;"},
+        {"number": 31, "action": "+", "line": "    private Integer dbShardIndex;"},
+        {"number": 32, "line": ""},
+        {"number": 33, "line": "    @Override"},
+        {"number": 34, "line": "    public void preProcess(Parameters parameters) {"},
+        {"number": 35, "line": "        startDate = parameters.get(FetchParamsKeys.startDate);"},
+        {"number": 36, "line": "        endDate = parameters.get(FetchParamsKeys.endDate);"},
+        {"number": 37, "action": "+", "line": "        dbShardIndex = parameters.get(FetchParamsKeys.dbShardIndex);"},
+        {"number": 38, "line": "    }"},
+        {"number": 39, "line": ""},
+        {"number": 40, "line": "    @Override"},
+        {"number": 41, "line": "    public void process() {"},
+        {"number": 42, "line": ""},
+        {"number": 43, "line": "        logger.debug(\"Process: Starting search incremental update processing.\");"},
+        {"number": 44, "action": "!", "line": "        Collection<Integer> shardIndices = null;"},
+        {"number": 45, "action": "+", "line": "        if(dbShardIndex == null) {"},
+        {"number": 46, "action": "+", "line": "        \tshardIndices = ShardLocator.allCatalogIndices();"},
+        {"number": 47, "action": "+", "line": "        }"},
+        {"number": 48, "action": "+", "line": "        else {"},
+        {"number": 49, "action": "+", "line": "        \tshardIndices = Lists.newArrayList(dbShardIndex);"},
+        {"number": 50, "action": "+", "line": "        }"},
+        {"number": 51, "line": "        //Process updates"},
+        {"number": 52, "action": "!", "line": "        for (Integer shardIndex : shardIndices) {"},
+        {"number": 53, "line": "            try {"},
+        {"number": 54, "line": "                Pair<Date, Multimap<Long, Long>> dateItemPair = SearchAccessor.getItemModifiedIdListSolr(shardIndex, application(), startDate, endDate);"},
+        {"number": 55, "line": "                if (dateItemPair != null) {"},
+        {"number": 56, "line": "                    Date completionDate = dateItemPair.getK();"},
+        {"number": 57, "line": "                    Multimap<Long, Long> itemsByAccount = dateItemPair.getV();"},
+        {"number": 58, "line": "                    if (itemsByAccount != null) {"},
+        {"number": 59, "line": "                        itemsByAccount.removeAll(null);"},
+        {"number": 60, "line": "                        if (!itemsByAccount.isEmpty()) {"},
+        {"number": 61, "line": "                            doIncrementalIndex(shardIndex,itemsByAccount);"},
+        {"number": 62, "line": "                            SearchAccessor.completeSearchIncrementalJob(completionDate, shardIndex, application());"},
+        {"number": 63, "line": "                        }"},
+        {"number": 64, "line": "                    }"},
+        {"number": 65, "line": "                }"},
+        {"number": 66, "line": "            } catch (Exception e) {"},
+        {"number": 67, "line": "                throw new XRuntime(\"Failed to index items from shardIndex: \" + shardIndex, e);"},
+        {"number": 68, "line": "            }"},
+        {"number": 69, "line": ""},
+        {"number": 70, "line": "        }"},
+        {"number": 71, "line": "    }"},
+        {"number": 72, "line": ""},
+        {"number": 73, "line": "    protected abstract void doIncrementalIndex(Integer dbShardIndex, Multimap<Long, Long> itemsByAccount);"},
+        {"number": 74, "line": ""},
+        {"number": 75, "line": "    protected abstract Applications application();"},
+        {"number": 76, "line": "}"}
+    ]});
+    var e = new Date();
+
+    $('#right-out').html(e - s);
 }
 </script>
 </head>
@@ -1177,7 +1374,9 @@ function loadTestDiff() {
 
 <script type="text/javascript">
     $(document).ready(function () {
-        loadTestDiff();
+//        loadTestDiff();
+
+        file = 'java';
 
         //basic
 
@@ -1187,47 +1386,62 @@ function loadTestDiff() {
 
         prettySyntax(line = {line: '/**'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
         prettySyntax(line = {line: ' * @author Pavel Mikhalchuk'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
         prettySyntax(line = {line: '*/'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
         prettySyntax(line = {line: '/*sdf*/public Comparison(List<Line> base, Diff diff) {'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
         prettySyntax(line = {line: 'while (b.hasNext()) {'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
         prettySyntax(line = {line: 'while (b.hasNext()) { //dfgdfg'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
         prettySyntax(line = {line: '/*sdf*/if (diff.existFor(l)) {//sdfsdf'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
-        prettySyntax(line = {line: '/*sdf*/if (diff.existFor(l)) {/*sdf*/'});
+        prettySyntax(line = {line: '/*sdf*/if (diff.existFor(l, 666)) {/*sdf*/'});
         spanUp(line);
-        $('#left-out').append(line.line + '</br>');
         $('#left-out').append(line.pretty + '</br>');
 
+        prettySyntax(line = {line: ' * sdf if (diff.existFor(l,, , ,, 666)) {'});
         spanUp(line);
-        prettySyntax(line = {line: ' * sdf if (diff.existFor(l)) {'});
-        $('#left-out').append(line.line + '</br>');
+        $('#left-out').append(line.pretty + '</br>');
+
+        prettySyntax(line = {line: '  sdf if (diff.existthrowFo throwsr(L, 32)) throws { throw new'});
+        spanUp(line);
+        $('#left-out').append(line.pretty + '</br>');
+
+        prettySyntax(line = {line: '/*sdf*/ifd @Ann "(diff.existFor(L,46))" sdf {/*sdf*/'});
+        spanUp(line);
+        $('#left-out').append(line.pretty + '</br>');
+
+        prettySyntax(line = {line: '/*sdf*/if() @Ann (diff.existFor(1, null)) sdf {/*sdf*/'});
+        spanUp(line);
+        $('#left-out').append(line.pretty + '</br>');
+
+        prettySyntax(line = {line: '/*sdf*/if () "@Ann class " (diff.exinullstFor(1)) sdf {/*sdf*/'});
+        spanUp(line);
+        $('#left-out').append(line.pretty + '</br>');
+
+        prettySyntax(line = {line: '/*sdf*/class {if @Ann class{ (diclassff.exinullstFor(1)) sdfalse { trueMethfalseC(true, false);/*sdf*/'});
+        spanUp(line);
+        $('#left-out').append(line.pretty + '</br>');
+
+        prettySyntax(line = {line: 'class false true null'});
+        spanUp(line);
         $('#left-out').append(line.pretty + '</br>');
     });
 </script>
