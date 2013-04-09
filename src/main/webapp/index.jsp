@@ -5,181 +5,234 @@
 <head>
 <title>Review</title>
 <style>
-    .pre {
-        position: relative;
-        display: inline-block;
-        margin: 0;
-        font-family: Menlo;
-        font-size: 12px;
-        tab-size: 4;
-    }
+.pre {
+    position: relative;
+    display: inline-block;
+    margin: 0;
+    font-family: Menlo;
+    font-size: 12px;
+    tab-size: 4;
+}
 
-    .active {
-        background-color: yellow;
-    }
+.active {
+    background-color: yellow;
+}
 
-    .row {
-        height: 15px;
-        /*border-top: solid 1px white;*/
-        border-bottom: solid 1px white;
-    }
+.row {
+    height: 15px;
+    /*border-top: solid 1px white;*/
+    border-bottom: solid 1px white;
+}
 
-    .number {
-        background-color: #f3f3f3;
-        border-bottom: solid 1px #f3f3f3;
-    }
+.number {
+    background-color: #f3f3f3;
+    border-bottom: solid 1px #f3f3f3;
+}
 
-    .modified {
-        background-color: #bfd5ff;
-        border-bottom: solid 1px #bfd5ff;
-    }
+.modified {
+    background-color: #edf3fe;
+    border-bottom: 1px solid #edf3fe;
+}
 
-    .added {
-        background-color: #98fcb7;
-        border-bottom: solid 1px #98fcb7;
-    }
+.added {
+    background-color: #c7f7d0;
+    border-bottom: 1px solid #c7f7d0;
+}
 
-    .deleted {
-        background-color: #a9a9a9;
-        border-bottom: solid 1px #a9a9a9;
-    }
+.deleted {
+    background-color: #dedede;
+    border-bottom: 1px solid #dedede;
+}
 
-    .first {
-        border-top: solid 1px brown;
-    }
+.last {
+    border-bottom: solid 1px #b1b7bf;
+}
 
-    .last {
-        border-bottom: solid 1px #acacac;
-    }
+#left-scroll {
+    width: 20px;
+    height: 639px;
+    background-color: #f7f7f7;
+    float: left;
+    border-right: solid 1px #ebebeb;
+    position: relative;
+}
 
-    #right-scroller {
-        width: 8px;
-        background-color: #c1c1c1;
-        float: right;
-        opacity: 0.4;
-        cursor: pointer;
-    }
+#left-scroller {
+    width: 8px;
+    background-color: #c1c1c1;
+    float: left;
+    opacity: 0.4;
+    cursor: pointer;
+}
 
-    #right-scroller:hover {
-        opacity: 0.7;
-    }
+#left-scroller:hover {
+    opacity: 0.7;
+}
 
-    #left-scroller {
-        width: 8px;
-        background-color: #c1c1c1;
-        float: left;
-        opacity: 0.4;
-        cursor: pointer;
-    }
+#left-content {
+    overflow: hidden;
+    position: relative;
+}
 
-    #left-scroller:hover {
-        opacity: 0.7;
-    }
+#left-line {
+    float: right;
+    background-color: #f3f3f3;
+    border-left: dotted 1px #929292;
+    direction: rtl;
+}
 
-    .horizont {
-        width: 654px;
-        height: 12px;
-        background-color: #f9f9f9;
-        border-top: solid 1px #e6e6e6;
-    }
+#left-middle {
+    width: 30px;
+    background-color: #f3f3f3;
+    float: right;
+    border-left: dotted 1px #929292;
+}
 
-    #lh-scroller {
-        height: 8px;
-        background-color: #c1c1c1;
-        opacity: 0.4;
-        margin-top: 4px;
-        cursor: pointer;
-    }
+#right-scroll {
+    width: 20px;
+    height: 639px;
+    background-color: #f7f7f7;
+    float: right;
+    border-left: solid 1px #ebebeb;
+    position: relative;
+}
 
-    #lh-scroller:hover {
-        opacity: 0.7;
-    }
+#right-scroller {
+    width: 8px;
+    background-color: #c1c1c1;
+    float: right;
+    opacity: 0.4;
+    cursor: pointer;
+}
 
-    #rh-scroller {
-        height: 8px;
-        background-color: #c1c1c1;
-        opacity: 0.4;
-        margin-top: 4px;
-        cursor: pointer;
-    }
+#right-scroller:hover {
+    opacity: 0.7;
+}
 
-    #rh-scroller:hover {
-        opacity: 0.7;
-    }
+#right-content {
+    overflow: hidden;
+    position: relative;
+}
 
-    .lls-margin {
-        float: left;
-        width: 21px;
-        height: 12px;
-        /*border-right: solid 1px #f3f3f3;*/
-    }
+#right-line {
+    background-color: #f3f3f3;
+    float: left;
+    border-right: dotted 1px #929292;
+    direction: rtl;
+}
 
-    .lrs-margin {
-        float: left;
-        width: 48px;
-        height: 12px;
-        /*border-left: dotted 1px #acacac;*/
-    }
+#right-middle {
+    width: 30px;
+    background-color: #f3f3f3;
+    float: left;
+    border-right: dotted 1px #929292;
+}
 
-    .rls-margin {
-        float: left;
-        width: 48px;
-        height: 12px;
-        /*border-right: dotted 1px #acacac;*/
-    }
+.horizont {
+    width: 654px;
+    height: 12px;
+    background-color: #f7f7f7;
+    border-top: solid 1px #ebebeb;
+}
 
-    .rrs-margin {
-        float: left;
-        width: 21px;
-        height: 12px;
-        /*border-left: solid 1px #f3f3f3;*/
-    }
+#lh-scroller {
+    height: 8px;
+    background-color: #c1c1c1;
+    opacity: 0.4;
+    margin-top: 4px;
+    cursor: pointer;
+}
 
-    .pd-deleted {
-        background-color: #bdbdbd;
-    }
+#lh-scroller:hover {
+    opacity: 0.7;
+}
 
-    .pd-pseudo-deleted {
-        border: solid 1px #bdbdbd;
-    }
+#rh-scroller {
+    height: 8px;
+    background-color: #c1c1c1;
+    opacity: 0.4;
+    margin-top: 4px;
+    cursor: pointer;
+}
 
-    .pd-added {
-        background-color: #98fcb7;
-    }
+#rh-scroller:hover {
+    opacity: 0.7;
+}
 
-    .pd-pseudo-added {
-        border: solid 1px #98fcb7;
-    }
+.lls-margin {
+    float: left;
+    width: 21px;
+    height: 12px;
+}
 
-    .pd-changed {
-        background-color: #b3c4ed;
-    }
+.lrs-margin {
+    float: left;
+    width: 48px;
+    height: 12px;
+}
 
-    .text {
-    }
+.rls-margin {
+    float: left;
+    width: 48px;
+    height: 12px;
+}
 
-    .keyword {
-        color: #130098;
-        font-weight: bold;
-    }
+.rrs-margin {
+    float: left;
+    width: 21px;
+    height: 12px;
+}
 
-    .comment {
-        color: #929292;
-        font-style: italic;
-    }
+.pd-deleted {
+    background-color: #dedede;
+    border-bottom: 1px solid #dedede;
+}
 
-    .annotation {
-        color: #31c331;
-    }
+.pd-pseudo-deleted {
+    border: solid 1px #dedede;
+    border-top: 0;
+}
 
-    .literal {
-        color: #059903;
-        font-weight: bold;
-    }
+.pd-added {
+    background-color: #c7f7d0;
+    border-bottom: 1px solid #c7f7d0;
+}
 
-    .digits {
-        color: #2a2eff;
-    }
+.pd-pseudo-added {
+    border: solid 1px #c7f7d0;
+    border-top: 0;
+}
+
+.pd-changed {
+    background-color: #d1e0fd;
+    border-bottom: 1px solid #d1e0fd;
+}
+
+.text {
+}
+
+.keyword {
+    color: #130098;
+    font-weight: bold;
+}
+
+.comment {
+    color: #929292;
+    font-style: italic;
+}
+
+.annotation {
+    color: #31c331;
+}
+
+.literal {
+    color: #059903;
+    font-weight: bold;
+}
+
+.digits {
+    color: #2a2eff;
+}
 </style>
 <script type="text/javascript" src="js/jquery-1.9.js"></script>
 <script type="text/javascript" src="js/jquery.mousewheel.js"></script>
@@ -277,8 +330,8 @@ function diff(diff) {
     var left = writeSide(diff.left, 'left');
     $('#left-content').html('<pre id="left-code" class="pre">' + left.lines + '</pre>');
     $('#left-code').width($('#left-code').width() + 100);
-    $('#left-middle').html('<pre style="margin: 0; color: #a52a2a;">' + left.middle + '</pre>');
-    $('#left-line').html('<pre style="margin: 0; color: #a52a2a;">' + left.numbers + '</pre>');
+    $('#left-middle').html('<pre style="margin: 0; color: #a20000;">' + left.middle + '</pre>');
+    $('#left-line').html('<pre style="margin: 0; color: #a20000;">' + left.numbers + '</pre>');
     leftLineCount = left.lineCount;
     leftLineByRealLine = left.lineByRealLine;
     leftRealLineByLine = left.realLineByLine;
@@ -428,6 +481,15 @@ function spanUp(line) {
         if (s != '') {
             p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
         }
+
+        if (typeof line.marks[line.line.length] != 'undefined') {
+            if (line.marks[line.line.length]['pd-pseudo-deleted'] == true) {
+                clazz = 'pd-pseudo-deleted';
+            } else if (line.marks[line.line.length]['pd-pseudo-added'] == true) {
+                clazz = 'pd-pseudo-added';
+            }
+            p += '<span class="' + clazz + '"></span>';
+        }
     }
 
     line.pretty = p;
@@ -540,9 +602,11 @@ function prettySideUnicode(side, d, mirror) {
                 } else if (d[i][0] == '!') {
                     color = 'pd-changed';
                 }
-                if (typeof side.marks[cur + j] == 'undefined') side.marks[cur + j] = {};
-                side.marks[cur + j][color] = true;
-                color = '';
+                if (color != '') {
+                    if (typeof side.marks[cur + j] == 'undefined') side.marks[cur + j] = {};
+                    side.marks[cur + j][color] = true;
+                    color = '';
+                }
             }
             cur += w.length;
         } else {
@@ -777,11 +841,11 @@ function initLeftScroller() {
     for (var i = 0; i < _diff.left.length; i++) {
         var l = _diff.left[i];
         if (l.action == '!') {
-            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; margin-left: 13px; background-color: #bfd5ff; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
+            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #9cabc9; border-bottom: solid 1px #9cabc9; cursor: pointer; margin-left: 13px; background-color: #c5d7fd; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
         } else if (l.action == '+' && l.line == '') {
-            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; margin-left: 13px; background-color: #98fcb7; position: absolute; width: 4px; height: ' + 3 + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
+            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #91c29b; border-bottom: solid 1px #91c29b; cursor: pointer; margin-left: 13px; background-color: #b8f5c4; position: absolute; width: 4px; height: ' + 3 + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
         } else if (l.action == '-') {
-            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #acacac; border-bottom: solid 1px #acacac; cursor: pointer; margin-left: 13px; background-color: #a9a9a9; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
+            changes += '<div onclick="moveToLeftRow(' + leftRealLineByLine[l.number].number + ')" style="border-top: solid 1px white; border-left: solid 1px white; border-right: solid 1px #a8a8a8; border-bottom: solid 1px #a8a8a8; cursor: pointer; margin-left: 13px; background-color: #d5d5d5; position: absolute; width: 4px; height: ' + (rowHeight - 1) + 'px; top: ' + rowHeight * (leftRealLineByLine[l.number].number) + 'px;"></div>';
         }
     }
     $('#left-scroll').append(changes);
@@ -1079,7 +1143,7 @@ function writeConnections() {
     var example = document.getElementById("middle");
     var ctx = example.getContext('2d');
 
-    ctx.fillStyle = "#f0f0f0";
+    ctx.fillStyle = "#ebebeb";
     ctx.fillRect(0, 0, 30, 639);
 
     var lines = _diff.left;
@@ -1093,9 +1157,9 @@ function writeConnections() {
         var l = lines[i];
         if (typeof l.action != 'undefined') {
             if (inside && action != l.action) {
-                x4 = 0.5;
+                x4 = 0;
                 y4 = (leftRealLineByLine[l.number].number - leftFirst) * 16 - 0.5;
-                x3 = 29.5;
+                x3 = 30;
                 y3 = (rightRealLineByLine[l.number].number - rightFirst) * 16 - 0.5;
                 fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4);
                 inside = false;
@@ -1104,16 +1168,16 @@ function writeConnections() {
             if (!inside) {
                 inside = true;
                 action = l.action;
-                x1 = 0.5;
+                x1 = 0;
                 y1 = (leftRealLineByLine[l.number].number - leftFirst) * 16 - 0.5;
-                x2 = 29.5;
+                x2 = 30;
                 y2 = (rightRealLineByLine[l.number].number - rightFirst) * 16 - 0.5;
             }
         } else {
             if (inside) {
-                x4 = 0.5;
+                x4 = 0;
                 y4 = (leftRealLineByLine[l.number].number - leftFirst) * 16 - 0.5;
-                x3 = 29.5;
+                x3 = 30;
                 y3 = (rightRealLineByLine[l.number].number - rightFirst) * 16 - 0.5;
                 fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4);
                 inside = false;
@@ -1121,13 +1185,13 @@ function writeConnections() {
         }
     }
 
-    ctx.fillStyle = "#f9f9f9";
+    ctx.fillStyle = "#f7f7f7";
     ctx.fillRect(0, 640, 30, 52);
 
-    ctx.strokeStyle = "#e6e6e6";
+    ctx.strokeStyle = "#ebebeb";
     ctx.beginPath();
-    ctx.moveTo(0.5, 639.5);
-    ctx.lineTo(29.5, 639.5);
+    ctx.moveTo(0, 639.5);
+    ctx.lineTo(30, 639.5);
     ctx.stroke();
     ctx.closePath();
 }
@@ -1141,9 +1205,9 @@ function fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4) {
     ctx.lineTo(x4, y4);
     ctx.lineTo(x1, y1);
 
-    if (action == '-') ctx.fillStyle = "#a9a9a9";
-    if (action == '+') ctx.fillStyle = "#98fcb7";
-    if (action == '!') ctx.fillStyle = "#bfd5ff";
+    if (action == '-') ctx.fillStyle = "#dedede";
+    if (action == '+') ctx.fillStyle = "#c7f7d0";
+    if (action == '!') ctx.fillStyle = "#edf3fe";
 
     ctx.fill();
 
@@ -1156,7 +1220,7 @@ function fill(ctx, action, x1, y1, x2, y2, x3, y3, x4, y4) {
     ctx.moveTo(x3, y3);
     ctx.lineTo(x4, y4);
 
-    ctx.strokeStyle = "#acacac";
+    ctx.strokeStyle = "#b1b7bf";
 
     ctx.stroke();
 
@@ -1355,32 +1419,25 @@ function loadTestDiff() {
 
 <div id="diff">
 
-    <div style="border: solid 1px #acacac; float: left;">
+    <div style="border: solid 1px #cbcbcb; float: left;">
         <div id="left" style="width: 654px; height: 639px; overflow: hidden;">
-            <div id="left-scroll"
-                 style="width: 20px; height: 639px; background-color: #f9f9f9; float: left; border-right: solid 1px #e6e6e6; position: relative;"></div>
-            <div id="left-line"
-                 style="float: right; background-color: #f3f3f3; border-left: dotted 1px #acacac; direction: rtl;"></div>
-            <div id="left-middle"
-                 style="width: 30px; background-color: #f3f3f3; float: right; border-left: dotted 1px #acacac;"></div>
-            <div id="left-content" style="overflow: hidden; position: relative;"></div>
+            <div id="left-scroll"></div>
+            <div id="left-line"></div>
+            <div id="left-middle"></div>
+            <div id="left-content"></div>
         </div>
         <div id="lh-scroll" class="horizont"></div>
     </div>
 
     <canvas id="middle" width="30" height="652"
-            style="float: left; border-top: solid 1px #acacac; border-bottom: solid 1px #acacac;"></canvas>
+            style="float: left; border-top: solid 1px #cbcbcb; border-bottom: solid 1px #cbcbcb;"></canvas>
 
-    <div style="border: solid 1px #acacac; float: left;">
-        <div id="right"
-             style="width: 654px; height: 639px; overflow: hidden;">
-            <div id="right-line"
-                 style="background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac; direction: rtl;"></div>
-            <div id="right-middle"
-                 style="width: 30px; background-color: #f3f3f3; float: left; border-right: dotted 1px #acacac;"></div>
-            <div id="right-scroll"
-                 style="width: 20px; height: 639px; background-color: #f9f9f9; float: right; border-left: solid 1px #e6e6e6; position: relative;"></div>
-            <div id="right-content" style="overflow: hidden;"></div>
+    <div style="border: solid 1px #cbcbcb; float: left;">
+        <div id="right" style="width: 654px; height: 639px; overflow: hidden;">
+            <div id="right-line"></div>
+            <div id="right-middle"></div>
+            <div id="right-scroll"></div>
+            <div id="right-content"></div>
         </div>
         <div id="rh-scroll" class="horizont"></div>
     </div>
