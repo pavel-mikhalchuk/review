@@ -362,56 +362,72 @@ function spanUp(line) {
     var changeClazz = '';
     var newClazz = '';
     var newChangeClazz = '';
+    var specialClazz = '';
     var s = '';
     var c = '';
 
-    for (var i = 0; i < line.line.length; i++) {
-        if (typeof line.marks[i] != 'undefined') {
-            if (line.marks[i]['comment'] == true) {
-                newClazz = 'comment';
-            } else if (line.marks[i]['literal'] == true) {
-                newClazz = 'literal';
-            } else if (line.marks[i]['keyword'] == true) {
-                newClazz = 'keyword';
-            } else if (line.marks[i]['annotation'] == true) {
-                newClazz = 'annotation';
-            } else if (line.marks[i]['digits'] == true) {
-                newClazz = 'digits';
+    if (line.line.length == 0 && typeof line.marks[0] != 'undefined') {
+        if (line.marks[0]['pd-pseudo-deleted'] == true) {
+            clazz = 'pd-pseudo-deleted';
+        } else if (line.marks[0]['pd-pseudo-added'] == true) {
+            clazz = 'pd-pseudo-added';
+        }
+        p = '<span class="' + clazz + '"></span>';
+    } else {
+        for (var i = 0; i < line.line.length; i++) {
+            if (typeof line.marks[i] != 'undefined') {
+                if (line.marks[i]['comment'] == true) {
+                    newClazz = 'comment';
+                } else if (line.marks[i]['literal'] == true) {
+                    newClazz = 'literal';
+                } else if (line.marks[i]['keyword'] == true) {
+                    newClazz = 'keyword';
+                } else if (line.marks[i]['annotation'] == true) {
+                    newClazz = 'annotation';
+                } else if (line.marks[i]['digits'] == true) {
+                    newClazz = 'digits';
+                } else {
+                    newClazz = '';
+                }
+
+                if (line.marks[i]['pd-deleted'] == true) {
+                    newChangeClazz = 'pd-deleted';
+                } else if (line.marks[i]['pd-added'] == true) {
+                    newChangeClazz = 'pd-added';
+                } else if (line.marks[i]['pd-changed'] == true) {
+                    newChangeClazz = 'pd-changed';
+                } else {
+                    newChangeClazz = '';
+                }
+
+                if (line.marks[i]['pd-pseudo-deleted'] == true) {
+                    specialClazz = 'pd-pseudo-deleted';
+                } else if (line.marks[i]['pd-pseudo-added'] == true) {
+                    specialClazz = 'pd-pseudo-added';
+                }
             } else {
-                newClazz = 'unknown';
+                newClazz = newChangeClazz = 'text';
             }
 
-            if (line.marks[i]['pd-deleted'] == true) {
-                newChangeClazz = ' pd-deleted';
-            } else if (line.marks[i]['pd-pseudo-deleted'] == true) {
-                newChangeClazz = ' pd-pseudo-deleted';
-            } else if (line.marks[i]['pd-added'] == true) {
-                newChangeClazz = ' pd-added';
-            } else if (line.marks[i]['pd-pseudo-added'] == true) {
-                newChangeClazz = ' pd-pseudo-added';
-            } else if (line.marks[i]['pd-changed'] == true) {
-                newChangeClazz = ' pd-changed';
-            } else {
-                newChangeClazz = '';
+            if (clazz != newClazz || changeClazz != newChangeClazz || specialClazz != '') {
+                if (s != '') {
+                    p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
+                    s = '';
+                }
+                if (specialClazz != '') {
+                    p += '<span class="' + specialClazz + '"></span>';
+                }
+                clazz = newClazz;
+                changeClazz = newChangeClazz;
+                specialClazz = '';
             }
-        } else {
-            newClazz = newChangeClazz = 'text';
+
+            s += line.line.charAt(i);
         }
 
-        if (clazz != newClazz || changeClazz != newChangeClazz) {
-            if (s != '') {
-                p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
-                s = '';
-            }
-            clazz = newClazz;
-            changeClazz = newChangeClazz;
+        if (s != '') {
+            p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
         }
-
-        s += line.line.charAt(i);
-    }
-
-    if (s != '') {
-        p += '<span class="' + $.trim(clazz + ' ' + changeClazz) + '">' + s + '</span>';
     }
 
     line.pretty = p;
@@ -512,25 +528,32 @@ function prettySideUnicode(side, d, mirror) {
 
     for (var i = 0; i < d.length; i++) {
         var w = fromUnicode(d[i][1], mirror);
-        for (var j = 0; j < w.length; j++) {
-            var color;
-            if (d[i][0] == 0) {
+        var color = '';
+        if (w != '') {
+            for (var j = 0; j < w.length; j++) {
+                if (d[i][0] == 0) {
+                    color = '';
+                } else if (d[i][0] == -1) {
+                    color = 'pd-deleted';
+                } else if (d[i][0] == 1) {
+                    color = 'pd-added';
+                } else if (d[i][0] == '!') {
+                    color = 'pd-changed';
+                }
+                if (typeof side.marks[cur + j] == 'undefined') side.marks[cur + j] = {};
+                side.marks[cur + j][color] = true;
                 color = '';
-            } else if (d[i][0] == -1) {
-                color = 'pd-deleted';
-            } else if (d[i][0] == -11) {
+            }
+            cur += w.length;
+        } else {
+            if (d[i][0] == -11) {
                 color = 'pd-pseudo-deleted';
-            } else if (d[i][0] == 1) {
-                color = 'pd-added';
             } else if (d[i][0] == 11) {
                 color = 'pd-pseudo-added';
-            } else if (d[i][0] == '!') {
-                color = 'pd-changed';
             }
-            if (typeof side.marks[cur + j] == 'undefined') side.marks[cur + j] = {};
-            side.marks[cur + j][color] = true;
+            if (typeof side.marks[cur] == 'undefined') side.marks[cur] = {};
+            side.marks[cur][color] = true;
         }
-        cur += w.length;
     }
 }
 

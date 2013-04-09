@@ -22,6 +22,6 @@ TODO:
 17. vertical drag improvement
 18. vertical scroll delta optimization
 19. skins
+20. resize
 
-c. disappeared borders
 f. colors
